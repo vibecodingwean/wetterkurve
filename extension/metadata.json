@@ -1,0 +1,7 @@
+{
+  "uuid": "muenchen-wetter@wean.de",
+  "name": "München Wetter",
+  "description": "Wetter für München mit kompakter 48-Stunden-Kurvenansicht",
+  "shell-version": ["50"],
+  "version": 1
+}

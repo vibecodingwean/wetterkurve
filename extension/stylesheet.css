@@ -1,0 +1,107 @@
+.mw-panel {
+  spacing: 5px;
+}
+
+.mw-panel-icon {
+  font-size: 15px;
+}
+
+.mw-panel-text {
+  font-weight: 650;
+}
+
+.mw-content {
+  width: 680px;
+  padding: 8px 10px 6px;
+  spacing: 14px;
+}
+
+.mw-header {
+  spacing: 12px;
+}
+
+.mw-title {
+  font-size: 22px;
+  font-weight: 750;
+}
+
+.mw-condition {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+}
+
+.mw-big-icon {
+  font-size: 30px;
+  min-width: 42px;
+  text-align: center;
+}
+
+.mw-temperature {
+  font-size: 34px;
+  font-weight: 300;
+  min-width: 76px;
+  text-align: right;
+}
+
+.mw-refresh-button {
+  border-radius: 99px;
+  font-size: 20px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
+}
+
+.mw-refresh-button:hover,
+.mw-refresh-button:focus {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.mw-refresh-button:active {
+  color: #7cc8ff;
+}
+
+.mw-stats {
+  spacing: 8px;
+}
+
+.mw-stat {
+  background-color: rgba(255, 255, 255, 0.055);
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-width: 132px;
+}
+
+.mw-stat-value {
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.mw-stat-name {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+}
+
+.mw-chart-heading {
+  spacing: 10px;
+}
+
+.mw-section-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mw-legend {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  text-align: right;
+}
+
+.mw-chart {
+  height: 250px;
+}
+
+.mw-status {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 10px;
+  text-align: right;
+}
