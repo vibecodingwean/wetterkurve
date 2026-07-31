@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="sun" cx="35%" cy="30%">
+      <stop offset="0" stop-color="#fff6a0"/>
+      <stop offset="1" stop-color="#ffad21"/>
+    </radialGradient>
+    <linearGradient id="cloud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7fbff"/>
+      <stop offset="1" stop-color="#9fc7e7"/>
+    </linearGradient>
+  </defs>
+  <g stroke="#ffb21c" stroke-linecap="round" stroke-width="3">
+    <path d="M23 5v6M7 21h6M11.5 9.5l4.2 4.2M34.3 9.5l-4.2 4.2"/>
+  </g>
+  <circle cx="23" cy="21" r="11" fill="url(#sun)" stroke="#ffb21c" stroke-width="1.5"/>
+  <path d="M15 51h35a9 9 0 0 0 1-17.9A15 15 0 0 0 22.8 30 11 11 0 0 0 15 51Z" fill="url(#cloud)" stroke="#79a9d0" stroke-width="2"/>
+</svg>
