@@ -1,36 +1,36 @@
 export const WMO = {
-    0: ['☀', 'Klar'],
-    1: ['🌤', 'Überwiegend klar'],
-    2: ['⛅', 'Teilweise bewölkt'],
-    3: ['☁', 'Bedeckt'],
-    45: ['≋', 'Nebel'],
-    48: ['≋', 'Reifnebel'],
-    51: ['☂', 'Leichter Nieselregen'],
-    53: ['☂', 'Nieselregen'],
-    55: ['☂', 'Starker Nieselregen'],
-    56: ['☂', 'Gefrierender Nieselregen'],
-    57: ['☂', 'Starker gefrierender Nieselregen'],
-    61: ['☂', 'Leichter Regen'],
-    63: ['☂', 'Regen'],
-    65: ['☂', 'Starker Regen'],
-    66: ['☂', 'Gefrierender Regen'],
-    67: ['☂', 'Starker gefrierender Regen'],
-    71: ['❄', 'Leichter Schneefall'],
-    73: ['❄', 'Schneefall'],
-    75: ['❄', 'Starker Schneefall'],
-    77: ['❄', 'Schneegriesel'],
-    80: ['☂', 'Leichte Regenschauer'],
-    81: ['☂', 'Regenschauer'],
-    82: ['☂', 'Starke Regenschauer'],
-    85: ['❄', 'Leichte Schneeschauer'],
-    86: ['❄', 'Starke Schneeschauer'],
-    95: ['ϟ', 'Gewitter'],
-    96: ['ϟ', 'Gewitter mit Hagel'],
-    99: ['ϟ', 'Starkes Gewitter mit Hagel'],
+    0: ['☀', 'Klar', 'clear'],
+    1: ['🌤', 'Überwiegend klar', 'partly-cloudy'],
+    2: ['⛅', 'Teilweise bewölkt', 'partly-cloudy'],
+    3: ['☁', 'Bedeckt', 'cloudy'],
+    45: ['≋', 'Nebel', 'fog'],
+    48: ['≋', 'Reifnebel', 'fog'],
+    51: ['☂', 'Leichter Nieselregen', 'drizzle'],
+    53: ['☂', 'Nieselregen', 'drizzle'],
+    55: ['☂', 'Starker Nieselregen', 'rain'],
+    56: ['☂', 'Gefrierender Nieselregen', 'drizzle'],
+    57: ['☂', 'Starker gefrierender Nieselregen', 'rain'],
+    61: ['☂', 'Leichter Regen', 'rain'],
+    63: ['☂', 'Regen', 'rain'],
+    65: ['☂', 'Starker Regen', 'rain'],
+    66: ['☂', 'Gefrierender Regen', 'rain'],
+    67: ['☂', 'Starker gefrierender Regen', 'rain'],
+    71: ['❄', 'Leichter Schneefall', 'snow'],
+    73: ['❄', 'Schneefall', 'snow'],
+    75: ['❄', 'Starker Schneefall', 'snow'],
+    77: ['❄', 'Schneegriesel', 'snow'],
+    80: ['☂', 'Leichte Regenschauer', 'rain'],
+    81: ['☂', 'Regenschauer', 'rain'],
+    82: ['☂', 'Starke Regenschauer', 'rain'],
+    85: ['❄', 'Leichte Schneeschauer', 'snow'],
+    86: ['❄', 'Starke Schneeschauer', 'snow'],
+    95: ['ϟ', 'Gewitter', 'thunderstorm'],
+    96: ['ϟ', 'Gewitter mit Hagel', 'thunderstorm'],
+    99: ['ϟ', 'Starkes Gewitter mit Hagel', 'thunderstorm'],
 };
 
 export function weatherInfo(code) {
-    return WMO[code] ?? ['•', 'Unbekannt'];
+    return WMO[code] ?? ['•', 'Unbekannt', 'unknown'];
 }
 
 export function round(value) {
@@ -58,20 +58,21 @@ export function buildForecastUrl(latitude, longitude, timezone = 'Europe/Berlin'
         `longitude=${longitude}`,
         `current=${current}`,
         `hourly=${hourly}`,
-        'forecast_hours=60',
+        'forecast_days=3',
         `timezone=${encodeURIComponent(timezone)}`,
     ];
     return `https://api.open-meteo.com/v1/forecast?${params.join('&')}`;
 }
 
-export function chartForecast(payload, hours = 48) {
+export function chartForecast(payload, hours = 72, now = new Date()) {
     if (!payload?.hourly?.time?.length)
         return [];
 
     const h = payload.hourly;
-    const now = Date.now();
+    const midnight = new Date(now);
+    midnight.setHours(0, 0, 0, 0);
     let start = h.time.findIndex(value =>
-        new Date(value).getTime() >= now - 60 * 60 * 1000);
+        new Date(value).getTime() >= midnight.getTime());
     if (start < 0)
         start = 0;
 

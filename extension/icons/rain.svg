@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="cloud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#dceaf4"/>
+      <stop offset="1" stop-color="#6689a7"/>
+    </linearGradient>
+  </defs>
+  <path d="M9 36h42a10 10 0 0 0 0-20 16 16 0 0 0-30-2A12 12 0 0 0 9 36Z" fill="url(#cloud)" stroke="#527792" stroke-width="2"/>
+  <g fill="none" stroke="#3eafff" stroke-linecap="round" stroke-width="4">
+    <path d="M20 44l-4 10M34 44l-4 10M48 44l-4 10"/>
+  </g>
+</svg>

@@ -1,16 +1,19 @@
 .mw-panel {
+  color: #ffffff;
   spacing: 5px;
 }
 
 .mw-panel-icon {
-  font-size: 15px;
+  icon-size: 17px;
 }
 
 .mw-panel-text {
+  color: #ffffff;
   font-weight: 650;
 }
 
 .mw-content {
+  color: #ffffff;
   width: 680px;
   padding: 8px 10px 6px;
   spacing: 14px;
@@ -21,22 +24,24 @@
 }
 
 .mw-title {
+  color: #ffffff;
   font-size: 22px;
   font-weight: 750;
 }
 
 .mw-condition {
-  color: rgba(255, 255, 255, 0.66);
+  color: #ffffff;
   font-size: 13px;
 }
 
 .mw-big-icon {
-  font-size: 30px;
-  min-width: 42px;
-  text-align: center;
+  icon-size: 42px;
+  margin: 0 2px;
+  min-width: 46px;
 }
 
 .mw-temperature {
+  color: #ffffff;
   font-size: 34px;
   font-weight: 300;
   min-width: 76px;
@@ -44,6 +49,7 @@
 }
 
 .mw-refresh-button {
+  color: #ffffff;
   border-radius: 99px;
   font-size: 20px;
   height: 34px;
@@ -57,7 +63,7 @@
 }
 
 .mw-refresh-button:active {
-  color: #7cc8ff;
+  color: #ffffff;
 }
 
 .mw-stats {
@@ -65,19 +71,21 @@
 }
 
 .mw-stat {
-  background-color: rgba(255, 255, 255, 0.055);
+  background-color: rgba(255, 255, 255, 0.095);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 12px;
   padding: 10px 12px;
   min-width: 132px;
 }
 
 .mw-stat-value {
+  color: #ffffff;
   font-size: 17px;
   font-weight: 650;
 }
 
 .mw-stat-name {
-  color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
   font-size: 11px;
 }
 
@@ -86,22 +94,26 @@
 }
 
 .mw-section-title {
+  color: #ffffff;
   font-size: 14px;
   font-weight: 700;
 }
 
 .mw-legend {
-  color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
   font-size: 11px;
   text-align: right;
 }
 
 .mw-chart {
+  background-color: rgba(8, 12, 22, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
   height: 250px;
 }
 
 .mw-status {
-  color: rgba(255, 255, 255, 0.42);
+  color: #ffffff;
   font-size: 10px;
   text-align: right;
 }
