@@ -13,6 +13,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {
     buildForecastUrl,
+    chartDaySegments,
     chartForecast,
     round,
     validateForecast,
@@ -37,6 +38,10 @@ const TEMPERATURE_COLORS = [
     [22, [1.00, 0.84, 0.16]],
     [28, [1.00, 0.48, 0.12]],
     [35, [1.00, 0.20, 0.16]],
+];
+const DAY_STRIP_COLORS = [
+    [0.16, 0.34, 0.56, 0.82],
+    [0.10, 0.22, 0.39, 0.88],
 ];
 
 function label(text, styleClass) {
@@ -70,7 +75,7 @@ class ForecastChart extends St.DrawingArea {
         if (data.length < 2 || width < 100 || height < 100)
             return;
 
-        const plot = {left: 36, top: 34, right: width - 16, bottom: height - 42};
+        const plot = {left: 36, top: 40, right: width - 16, bottom: height - 42};
         const plotWidth = plot.right - plot.left;
         const plotHeight = plot.bottom - plot.top;
         const temperatures = data.flatMap(point =>
@@ -90,6 +95,8 @@ class ForecastChart extends St.DrawingArea {
         cr.setSourceRGBA(0.04, 0.055, 0.09, 0.32);
         cr.rectangle(plot.left, plot.top, plotWidth, plotHeight);
         cr.fill();
+
+        this._drawDayStrip(cr, data, plot);
 
         for (let i = 0; i < data.length - 1; i++) {
             const hour = new Date(data[i].time).getHours();
@@ -174,9 +181,7 @@ class ForecastChart extends St.DrawingArea {
 
             cr.setSourceRGBA(1, 1, 1, 1);
             cr.setFontSize(10);
-            const text = hour === 0
-                ? date.toLocaleDateString('de-DE', {weekday: 'short'})
-                : `${String(hour).padStart(2, '0')} h`;
+            const text = `${String(hour).padStart(2, '0')} h`;
             const extents = cr.textExtents(text);
             cr.moveTo(x(i) - extents.width / 2, height - 19);
             cr.showText(text);
@@ -202,6 +207,47 @@ class ForecastChart extends St.DrawingArea {
             cr.lineTo(nowX, plot.bottom);
             cr.stroke();
         }
+    }
+
+    _drawDayStrip(cr, data, plot) {
+        const stripTop = 6;
+        const stripBottom = 30;
+        const stripHeight = stripBottom - stripTop;
+        const plotWidth = plot.right - plot.left;
+        const days = chartDaySegments(data);
+
+        cr.selectFontFace('Sans', Cairo.FontSlant.NORMAL, Cairo.FontWeight.BOLD);
+        cr.setFontSize(11);
+
+        days.forEach((day, index) => {
+            const left = plot.left + day.start / data.length * plotWidth;
+            const right = plot.left + day.end / data.length * plotWidth;
+            const [red, green, blue, alpha] =
+                DAY_STRIP_COLORS[index % DAY_STRIP_COLORS.length];
+
+            cr.setSourceRGBA(red, green, blue, alpha);
+            cr.rectangle(left, stripTop, right - left, stripHeight);
+            cr.fillPreserve();
+            cr.setSourceRGBA(0.64, 0.81, 1, 0.32);
+            cr.setLineWidth(1);
+            cr.stroke();
+
+            cr.setSourceRGBA(1, 1, 1, 0.96);
+            const extents = cr.textExtents(day.label);
+            const textX = left + (right - left - extents.width) / 2;
+            const textY = stripTop + (stripHeight - extents.height) / 2 -
+                extents.yBearing;
+            cr.moveTo(textX, textY);
+            cr.showText(day.label);
+
+            if (index > 0) {
+                cr.setSourceRGBA(0.64, 0.81, 1, 0.30);
+                cr.setLineWidth(1);
+                cr.moveTo(left, stripBottom);
+                cr.lineTo(left, plot.bottom);
+                cr.stroke();
+            }
+        });
     }
 
     _smoothLine(cr, values, x, y, source, width, dashed, outline = null) {
