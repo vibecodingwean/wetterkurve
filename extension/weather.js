@@ -91,6 +91,34 @@ export function chartForecast(payload, hours = 72, now = new Date()) {
     });
 }
 
+export function chartDaySegments(forecast, locale = 'de-DE') {
+    const segments = [];
+
+    forecast.forEach((point, index) => {
+        const date = new Date(point.time);
+        const key = [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(2, '0'),
+        ].join('-');
+        const current = segments.at(-1);
+
+        if (current?.key === key) {
+            current.end = index + 1;
+            return;
+        }
+
+        segments.push({
+            key,
+            label: date.toLocaleDateString(locale, {weekday: 'long'}),
+            start: index,
+            end: index + 1,
+        });
+    });
+
+    return segments;
+}
+
 export function validateForecast(payload) {
     if (!payload?.current || !payload?.hourly)
         throw new Error('Unvollständige Wetterdaten');

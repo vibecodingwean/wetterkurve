@@ -1,5 +1,6 @@
 import {
     buildForecastUrl,
+    chartDaySegments,
     chartForecast,
     round,
     validateForecast,
@@ -46,6 +47,14 @@ assert(forecast[0].time === '2026-07-31T00:00',
     'chart must start at midnight today');
 assert(forecast.at(-1).time === '2026-08-02T23:00',
     'chart must end at the last hour of the third day');
+const days = chartDaySegments(forecast);
+assert(days.length === 3, 'chart must contain three day segments');
+assert(days[0].label === 'Freitag' && days[1].label === 'Samstag' &&
+    days[2].label === 'Sonntag', 'day segment labels are wrong');
+assert(days.every(day => day.end - day.start === 24),
+    'every full day segment must span 24 hourly values');
+assert(days[0].start === 0 && days.at(-1).end === 72,
+    'day segments must cover the complete chart');
 assert(weatherInfo(0)[1] === 'Klar', 'WMO mapping is wrong');
 assert(weatherInfo(1234)[1] === 'Unbekannt', 'WMO fallback is wrong');
 assert(weatherInfo(0)[2] === 'clear', 'clear weather icon is wrong');
