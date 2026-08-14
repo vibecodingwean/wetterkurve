@@ -1,7 +1,7 @@
 {
-  "uuid": "muenchen-wetter@wean.de",
-  "name": "Wetterorte",
-  "description": "Wetter für bis zu drei Orte mit kompakter Drei-Tage-Kurvenansicht",
+  "uuid": "wetterkurve@wean.de",
+  "name": "Wetterkurve",
+  "description": "A compact three-day weather chart for up to three saved locations",
   "shell-version": ["50"],
-  "version": 1
+  "settings-schema": "org.gnome.shell.extensions.wetterkurve"
 }

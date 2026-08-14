@@ -11,6 +11,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import {languageForLocale, text} from './language.js';
+
 import {
     buildForecastUrl,
     buildGeocodingUrl,
@@ -25,8 +27,8 @@ import {
 
 const DEFAULT_LOCATION = {
     id: '48.1374,11.5755',
-    name: 'München',
-    label: 'München, Bayern, Deutschland',
+    name: 'Munich',
+    label: 'Munich, Bavaria, Germany',
     latitude: 48.1374,
     longitude: 11.5755,
     timezone: 'Europe/Berlin',
@@ -67,11 +69,17 @@ class ForecastChart extends St.DrawingArea {
             x_expand: true,
         });
         this._forecast = [];
+        this._locale = 'en-US';
         this.connect('repaint', area => this._repaint(area));
     }
 
     setForecast(forecast) {
         this._forecast = forecast;
+        this.queue_repaint();
+    }
+
+    setLocale(locale) {
+        this._locale = locale;
         this.queue_repaint();
     }
 
@@ -221,7 +229,7 @@ class ForecastChart extends St.DrawingArea {
         const stripBottom = 30;
         const stripHeight = stripBottom - stripTop;
         const plotWidth = plot.right - plot.left;
-        const days = chartDaySegments(data);
+        const days = chartDaySegments(data, this._locale);
 
         cr.selectFontFace('Sans', Cairo.FontSlant.NORMAL, Cairo.FontWeight.BOLD);
         cr.setFontSize(11);
@@ -291,8 +299,10 @@ class ForecastChart extends St.DrawingArea {
     }
 });
 
-export default class MuenchenWetterExtension extends Extension {
+export default class WetterkurveExtension extends Extension {
     enable() {
+        this._language = languageForLocale();
+        this._locale = this._language === 'de' ? 'de-DE' : 'en-US';
         this._payload = null;
         this._lastUpdated = 0;
         this._requestInFlight = false;
@@ -356,6 +366,12 @@ export default class MuenchenWetterExtension extends Extension {
         this._activeLocation = null;
         this._chart = null;
         this._payload = null;
+        this._language = null;
+        this._locale = null;
+    }
+
+    _t(key, values) {
+        return text(this._language, key, values);
     }
 
     _buildUi() {
@@ -412,7 +428,7 @@ export default class MuenchenWetterExtension extends Extension {
             visible: false,
         });
         this._searchEntry = new St.Entry({
-            hint_text: 'Ort suchen …',
+            hint_text: this._t('searchLocation'),
             can_focus: true,
             style_class: 'mw-search-entry',
             x_expand: true,
@@ -422,7 +438,7 @@ export default class MuenchenWetterExtension extends Extension {
         this._searchEntry.clutter_text.connect('activate', () =>
             this._searchLocations());
         this._searchHint = label(
-            'Mindestens zwei Buchstaben eingeben', 'mw-search-hint');
+            this._t('enterTwoLetters'), 'mw-search-hint');
         this._searchResults = new St.BoxLayout({
             vertical: true,
             style_class: 'mw-search-results',
@@ -439,7 +455,7 @@ export default class MuenchenWetterExtension extends Extension {
         });
         const currentBox = new St.BoxLayout({vertical: true, x_expand: true});
         this._title = label(this._activeLocation.name, 'mw-title');
-        this._condition = label('Wetter wird geladen …', 'mw-condition');
+        this._condition = label(this._t('loadingWeather'), 'mw-condition');
         currentBox.add_child(this._title);
         currentBox.add_child(this._condition);
         this._bigIcon = new St.Icon({
@@ -452,7 +468,7 @@ export default class MuenchenWetterExtension extends Extension {
             label: '↻',
             style_class: 'mw-refresh-button',
             can_focus: true,
-            accessible_name: 'Wetter aktualisieren',
+            accessible_name: this._t('refreshWeather'),
         });
         this._refreshButton.connect('clicked', () => this._refresh(true));
         header.add_child(currentBox);
@@ -465,10 +481,10 @@ export default class MuenchenWetterExtension extends Extension {
             style_class: 'mw-stats',
             x_expand: true,
         });
-        this._feels = this._stat('Gefühlt', '–°');
-        this._rain = this._stat('Regen', '– %');
-        this._wind = this._stat('Wind', '– km/h');
-        this._humidity = this._stat('Feuchte', '– %');
+        this._feels = this._stat(this._t('feelsLike'), '–°');
+        this._rain = this._stat(this._t('rain'), '– %');
+        this._wind = this._stat(this._t('wind'), '– km/h');
+        this._humidity = this._stat(this._t('humidity'), '– %');
         for (const stat of [this._feels, this._rain, this._wind, this._humidity])
             stats.add_child(stat.box);
         content.add_child(stats);
@@ -477,14 +493,15 @@ export default class MuenchenWetterExtension extends Extension {
             style_class: 'mw-chart-heading',
             x_expand: true,
         });
-        chartHeading.add_child(label('3 Tage ab heute', 'mw-section-title'));
-        const legend = label('● Temperatur   ┄ gefühlt   ▮ Regen', 'mw-legend');
+        chartHeading.add_child(label(this._t('threeDayForecast'), 'mw-section-title'));
+        const legend = label(this._t('chartLegend'), 'mw-legend');
         chartHeading.add_child(legend);
         content.add_child(chartHeading);
 
         this._chart = new ForecastChart();
+        this._chart.setLocale(this._locale);
         content.add_child(this._chart);
-        this._status = label('Open-Meteo · lädt …', 'mw-status');
+        this._status = label(this._t('loading'), 'mw-status');
         content.add_child(this._status);
 
         this._rebuildLocationTabs();
@@ -533,7 +550,9 @@ export default class MuenchenWetterExtension extends Extension {
                 label: location.name,
                 style_class: 'mw-location-button',
                 can_focus: true,
-                accessible_name: `${location.label || location.name} auswählen`,
+                accessible_name: this._t('selectLocation', {
+                    location: location.label || location.name,
+                }),
             });
             if (index === this._activeLocationIndex)
                 button.add_style_pseudo_class('active');
@@ -543,10 +562,10 @@ export default class MuenchenWetterExtension extends Extension {
 
         if (this._locations.length < MAX_LOCATIONS) {
             const addButton = new St.Button({
-                label: '+ Ort',
+                label: this._t('addLocation'),
                 style_class: 'mw-location-add-button',
                 can_focus: true,
-                accessible_name: 'Ort hinzufügen',
+                accessible_name: this._t('addLocationAccessible'),
             });
             addButton.connect('clicked', () => this._setLocationPickerVisible(true));
             this._locationTabs.add_child(addButton);
@@ -554,7 +573,7 @@ export default class MuenchenWetterExtension extends Extension {
 
         this._removeLocationButton.visible = this._locations.length > 1;
         this._removeLocationButton.accessible_name =
-            `${this._activeLocation.name} entfernen`;
+            this._t('removeLocation', {location: this._activeLocation.name});
     }
 
     _setLocationPickerVisible(visible) {
@@ -567,7 +586,7 @@ export default class MuenchenWetterExtension extends Extension {
             return;
         }
 
-        this._searchHint.text = 'Mindestens zwei Buchstaben eingeben';
+        this._searchHint.text = this._t('enterTwoLetters');
         this._searchEntry.grab_key_focus();
     }
 
@@ -598,14 +617,15 @@ export default class MuenchenWetterExtension extends Extension {
         this._clearSearchResults();
         this._searchCancellable?.cancel();
         if (query.length < 2) {
-            this._searchHint.text = 'Mindestens zwei Buchstaben eingeben';
+            this._searchHint.text = this._t('enterTwoLetters');
             return;
         }
 
         const requestId = ++this._searchRequestId;
         this._searchCancellable = new Gio.Cancellable();
-        this._searchHint.text = 'Suche …';
-        const message = Soup.Message.new('GET', buildGeocodingUrl(query));
+        this._searchHint.text = this._t('searching');
+        const message = Soup.Message.new(
+            'GET', buildGeocodingUrl(query, 8, this._language));
         this._session.send_and_read_async(
             message,
             GLib.PRIORITY_DEFAULT,
@@ -624,7 +644,7 @@ export default class MuenchenWetterExtension extends Extension {
                     this._renderLocationResults(results);
                 } catch (error) {
                     if (!error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                        this._searchHint.text = 'Ortsuche derzeit nicht erreichbar';
+                        this._searchHint.text = this._t('locationSearchUnavailable');
                 }
             });
     }
@@ -632,15 +652,15 @@ export default class MuenchenWetterExtension extends Extension {
     _renderLocationResults(results) {
         this._clearSearchResults();
         if (!results.length) {
-            this._searchHint.text = 'Keine passenden Orte gefunden';
+            this._searchHint.text = this._t('noLocationsFound');
             return;
         }
 
-        this._searchHint.text = 'Treffer auswählen';
+        this._searchHint.text = this._t('chooseLocation');
         for (const location of results) {
             const alreadySaved = this._locations.some(saved => saved.id === location.id);
             const button = new St.Button({
-                label: alreadySaved ? `${location.label} · gespeichert` : location.label,
+                label: alreadySaved ? this._t('saved', {location: location.label}) : location.label,
                 style_class: 'mw-search-result',
                 can_focus: true,
                 reactive: !alreadySaved,
@@ -695,7 +715,7 @@ export default class MuenchenWetterExtension extends Extension {
         this._lastUpdated = 0;
         this._title.text = this._activeLocation.name;
         this._panelText.text = `${this._activeLocation.name} …`;
-        this._condition.text = 'Wetter wird geladen …';
+        this._condition.text = this._t('loadingWeather');
         this._temperature.text = '–°';
         this._feels.value.text = '–°';
         this._rain.value.text = '– %';
@@ -720,7 +740,7 @@ export default class MuenchenWetterExtension extends Extension {
         this._forecastCancellable = new Gio.Cancellable();
         this._requestInFlight = true;
         this._refreshButton?.add_style_pseudo_class('active');
-        this._status.text = 'Open-Meteo · aktualisiert …';
+        this._status.text = this._t('refreshing');
         const url = buildForecastUrl(
             location.latitude,
             location.longitude,
@@ -756,7 +776,8 @@ export default class MuenchenWetterExtension extends Extension {
     _render(payload) {
         const current = payload.current;
         const forecast = chartForecast(payload, CHART_HOURS);
-        const [, description, iconName] = weatherInfo(current.weather_code);
+        const [, description, iconName] = weatherInfo(
+            current.weather_code, this._language);
         const now = Date.now();
         const upcomingRain = forecast
             .filter(point => new Date(point.time).getTime() >= now)
@@ -774,21 +795,21 @@ export default class MuenchenWetterExtension extends Extension {
         this._humidity.value.text = `${round(current.relative_humidity_2m)} %`;
         this._chart.setForecast(forecast);
 
-        const updated = new Date().toLocaleTimeString('de-DE', {
+        const updated = new Date().toLocaleTimeString(this._locale, {
             hour: '2-digit',
             minute: '2-digit',
         });
-        this._status.text = `Open-Meteo · aktualisiert ${updated} Uhr`;
+        this._status.text = this._t('updated', {time: updated});
     }
 
     _renderError() {
         this._status.text = this._payload
-            ? 'Keine Verbindung · letzte Prognose bleibt sichtbar'
-            : 'Wetterdaten derzeit nicht erreichbar';
+            ? this._t('offlineCached')
+            : this._t('weatherUnavailable');
         if (!this._payload) {
             this._setWeatherIcon('unknown');
-            this._panelText.text = `${this._activeLocation.name} · Wetter`;
-            this._condition.text = 'Keine Verbindung';
+            this._panelText.text = `${this._activeLocation.name} · ${this._t('weather')}`;
+            this._condition.text = this._t('offline');
         }
     }
 }

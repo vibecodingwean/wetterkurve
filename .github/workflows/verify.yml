@@ -1,0 +1,21 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the release gate in Fedora
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace fedora:latest bash -ec '
+            dnf install -y validator gnome-shell glib2 nodejs zip
+            ./test.sh
+          '

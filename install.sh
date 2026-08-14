@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-UUID="muenchen-wetter@wean.de"
+UUID="wetterkurve@wean.de"
 TARGET_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$UUID"
 
 "$PROJECT_DIR/test.sh"
@@ -17,10 +17,10 @@ ln -sfn -- "$PROJECT_DIR/extension" "$TARGET_DIR"
 
 if gnome-extensions info "$UUID" >/dev/null 2>&1; then
   gnome-extensions enable "$UUID"
-  printf 'München Wetter ist installiert und aktiviert.\n'
+  printf 'Wetterkurve is installed and enabled.\n'
 else
   printf '%s\n' \
-    'München Wetter ist installiert.' \
-    'GNOME Shell kennt die neue Erweiterung noch nicht.' \
-    'Bitte einmal abmelden und wieder anmelden; danach wird sie aktiviert.'
+    'Wetterkurve is installed.' \
+    'GNOME Shell does not know the new extension yet.' \
+    'Log out and back in once; it will then be enabled.'
 fi

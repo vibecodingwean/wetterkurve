@@ -1,0 +1,47 @@
+name: Publish Wetterkurve
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: gnome-extension-store
+    env:
+      EGO_USERNAME: ${{ secrets.EGO_USERNAME }}
+      EGO_PASSWORD: ${{ secrets.EGO_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify and package
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace fedora:latest bash -ec '
+            dnf install -y validator gnome-shell glib2 nodejs zip
+            ./test.sh
+          '
+      - name: Upload to extensions.gnome.org
+        run: |
+          test -n "$EGO_USERNAME"
+          test -n "$EGO_PASSWORD"
+          docker run --rm \
+            -e EGO_USERNAME -e EGO_PASSWORD \
+            -v "$GITHUB_WORKSPACE:/workspace" -w /workspace fedora:latest bash -ec '
+              dnf install -y gnome-shell glib2
+              password_file="$(mktemp)"
+              trap "rm -f \"$password_file\"" EXIT
+              umask 077
+              printf "%s" "$EGO_PASSWORD" > "$password_file"
+              gnome-extensions upload --accept-tos --user "$EGO_USERNAME" \
+                --password-file "$password_file" \
+                dist/wetterkurve@wean.de.shell-extension.zip
+            '
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            dist/wetterkurve@wean.de.shell-extension.zip \
+            --title "Wetterkurve $GITHUB_REF_NAME" --generate-notes
