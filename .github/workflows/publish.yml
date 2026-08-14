@@ -18,7 +18,7 @@ jobs:
       - name: Install release tools
         run: |
           dnf install -y --setopt=install_weak_deps=False \
-            git validator glib2 nodejs zip gh
+            git glib2 nodejs zip gh
       - name: Verify and package
         run: ./test.sh
       - name: Create or update GitHub release

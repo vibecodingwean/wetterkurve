@@ -27,7 +27,7 @@ jobs:
       - name: Install submission tools
         run: |
           dnf install -y --setopt=install_weak_deps=False \
-            git validator gnome-shell glib2 nodejs zip
+            git gnome-shell glib2 nodejs zip
       - name: Verify and package
         run: ./test.sh
       - name: Upload to extensions.gnome.org
