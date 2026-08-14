@@ -11,13 +11,14 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    container: fedora:44
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Run the release gate in Fedora
+      - name: Install the verification tools
         run: |
-          docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace fedora:latest bash -ec '
-            dnf install -y validator gnome-shell glib2 nodejs zip
-            ./test.sh
-          '
+          dnf install -y --setopt=install_weak_deps=False \
+            git validator glib2 nodejs zip
+      - name: Run the release gate
+        run: ./test.sh
