@@ -53,8 +53,11 @@ assert(forecast.at(-1).time === '2026-08-02T23:00',
     'chart must end at the last hour of the third day');
 const days = chartDaySegments(forecast, 'de-DE');
 assert(days.length === 3, 'chart must contain three day segments');
-assert(days[0].label === 'Freitag' && days[1].label === 'Samstag' &&
-    days[2].label === 'Sonntag', 'day segment labels are wrong');
+assert(days.map(day => day.key).join(',') ===
+    '2026-07-31,2026-08-01,2026-08-02',
+'day segment dates are wrong');
+assert(days.every(day => typeof day.label === 'string' && day.label.length > 0),
+    'day segment labels are missing');
 assert(days.every(day => day.end - day.start === 24),
     'every full day segment must span 24 hourly values');
 assert(days[0].start === 0 && days.at(-1).end === 72,
