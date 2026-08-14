@@ -351,6 +351,9 @@ export default class MuenchenWetterExtension extends Extension {
             reactive: false,
             can_focus: false,
         });
+        // Give the extension its own opaque surface.  GNOME's light popup
+        // theme otherwise leaves our white-on-dark design without a backdrop.
+        item.add_style_class_name('mw-popup');
         const content = new St.BoxLayout({
             vertical: true,
             style_class: 'mw-content',
