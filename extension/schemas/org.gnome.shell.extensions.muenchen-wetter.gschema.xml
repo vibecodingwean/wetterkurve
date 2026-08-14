@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.muenchen-wetter" path="/org/gnome/shell/extensions/muenchen-wetter/">
+    <key name="locations" type="s">
+      <default>'[{"id":"48.137,11.576","name":"München","label":"München, Bayern, Deutschland","latitude":48.137,"longitude":11.576,"timezone":"Europe/Berlin"}]'</default>
+      <summary>Saved weather locations</summary>
+    </key>
+    <key name="active-location" type="i">
+      <default>0</default>
+      <range min="0" max="2"/>
+      <summary>Index of the selected weather location</summary>
+    </key>
+  </schema>
+</schemalist>

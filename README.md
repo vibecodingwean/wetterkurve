@@ -1,7 +1,7 @@
 # München Wetter
 
-Eine native GNOME-Shell-Erweiterung für eine kompakte Wetterübersicht in
-München. Im Panel stehen Wetterzustand und Temperatur. Ein Klick öffnet eine
+Eine native GNOME-Shell-Erweiterung für eine kompakte Wetterübersicht für bis
+zu drei gespeicherte Orte. Im Panel stehen Wetterzustand und Temperatur. Ein Klick öffnet eine
 Drei-Tage-Ansicht von heute 00:00 Uhr bis übermorgen 23:00 Uhr mit geglätteter
 Temperaturkurve, gefühlter Temperatur, Regenwahrscheinlichkeit und
 Niederschlagsmenge. Eine farblich wechselnde Tagesleiste oberhalb der Kurven
@@ -23,6 +23,9 @@ ab- und wieder anmelden. Danach kann die Erweiterung auch mit der App
 ## Bedienung
 
 - Klick auf die Wetteranzeige: Detailansicht öffnen
+- „+ Ort“: per Live-Freitextsuche einen Ort hinzufügen (maximal drei)
+- Ortsname im Popup: zwischen gespeicherten Orten wechseln; „−“ entfernt den
+  aktuell ausgewählten Ort, solange mindestens ein Ort bleibt
 - Kreispfeil: Prognose sofort aktualisieren
 - Automatische Aktualisierung: alle 20 Minuten
 
