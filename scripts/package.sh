@@ -17,7 +17,6 @@ cp "$PROJECT_DIR/extension/metadata.json" \
 cp -R "$PROJECT_DIR/extension/icons/." "$STAGE_DIR/icons/"
 cp "$PROJECT_DIR/extension/schemas/org.gnome.shell.extensions.wetterkurve.gschema.xml" \
   "$STAGE_DIR/schemas/"
-glib-compile-schemas "$STAGE_DIR/schemas"
 
 rm -f -- "$PACKAGE_PATH"
 (
