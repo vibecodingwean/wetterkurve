@@ -1,7 +1,7 @@
 {
   "uuid": "muenchen-wetter@wean.de",
-  "name": "München Wetter",
-  "description": "Wetter für München mit kompakter Drei-Tage-Kurvenansicht",
+  "name": "Wetterorte",
+  "description": "Wetter für bis zu drei Orte mit kompakter Drei-Tage-Kurvenansicht",
   "shell-version": ["50"],
   "version": 1
 }

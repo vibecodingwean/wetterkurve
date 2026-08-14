@@ -1,7 +1,10 @@
 import {
     buildForecastUrl,
+    buildGeocodingUrl,
     chartDaySegments,
     chartForecast,
+    locationFromGeocodingResult,
+    parseLocations,
     round,
     validateForecast,
     weatherInfo,
@@ -67,6 +70,34 @@ assert(url.startsWith('https://api.open-meteo.com/v1/forecast?'),
     'forecast URL endpoint is wrong');
 assert(url.includes('forecast_days=3'), 'forecast URL range is wrong');
 assert(url.includes('timezone=Europe%2FBerlin'), 'forecast URL timezone is wrong');
+
+const geocodingUrl = buildGeocodingUrl('São Paulo');
+assert(geocodingUrl.startsWith('https://geocoding-api.open-meteo.com/v1/search?'),
+    'geocoding URL endpoint is wrong');
+assert(geocodingUrl.includes('name=S%C3%A3o%20Paulo'),
+    'geocoding search must be URL encoded');
+assert(geocodingUrl.includes('language=de'), 'geocoding language is missing');
+
+const berlin = locationFromGeocodingResult({
+    name: 'Berlin',
+    admin1: 'Berlin',
+    country: 'Deutschland',
+    latitude: 52.52,
+    longitude: 13.405,
+    timezone: 'Europe/Berlin',
+});
+assert(berlin?.label === 'Berlin, Berlin, Deutschland',
+    'geocoding result label is wrong');
+assert(berlin?.id === '52.5200,13.4050', 'geocoding result ID is wrong');
+assert(locationFromGeocodingResult({name: 'Broken'}) === null,
+    'invalid geocoding result was accepted');
+
+const fallback = [{name: 'München', latitude: 48.1374, longitude: 11.5755}];
+const parsedLocations = parseLocations(JSON.stringify([berlin]), fallback);
+assert(parsedLocations.length === 1 && parsedLocations[0].name === 'Berlin',
+    'saved locations were not parsed');
+assert(parseLocations('invalid JSON', fallback) === fallback,
+    'invalid saved locations did not use fallback');
 
 let invalidRejected = false;
 try {

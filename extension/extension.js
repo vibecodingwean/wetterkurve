@@ -13,15 +13,20 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {
     buildForecastUrl,
+    buildGeocodingUrl,
     chartDaySegments,
     chartForecast,
+    locationFromGeocodingResult,
+    parseLocations,
     round,
     validateForecast,
     weatherInfo,
 } from './weather.js';
 
-const LOCATION = {
+const DEFAULT_LOCATION = {
+    id: '48.1374,11.5755',
     name: 'München',
+    label: 'München, Bayern, Deutschland',
     latitude: 48.1374,
     longitude: 11.5755,
     timezone: 'Europe/Berlin',
@@ -30,6 +35,8 @@ const UPDATE_SECONDS = 20 * 60;
 const STALE_SECONDS = 10 * 60;
 const NOW_MARKER_UPDATE_SECONDS = 60;
 const CHART_HOURS = 3 * 24;
+const MAX_LOCATIONS = 3;
+const SEARCH_DELAY_MS = 250;
 const TEMPERATURE_COLORS = [
     [-15, [0.36, 0.55, 1.00]],
     [-5, [0.20, 0.78, 1.00]],
@@ -291,7 +298,17 @@ export default class MuenchenWetterExtension extends Extension {
         this._requestInFlight = false;
         this._timeoutId = null;
         this._nowMarkerTimeoutId = null;
-        this._cancellable = new Gio.Cancellable();
+        this._searchTimeoutId = null;
+        this._forecastRequestId = 0;
+        this._searchRequestId = 0;
+        this._forecastCancellable = null;
+        this._searchCancellable = null;
+        this._settings = this.getSettings();
+        this._locations = parseLocations(
+            this._settings.get_string('locations'), [DEFAULT_LOCATION]);
+        this._activeLocationIndex = Math.min(
+            this._settings.get_int('active-location'), this._locations.length - 1);
+        this._activeLocation = this._locations[this._activeLocationIndex];
         this._session = new Soup.Session({
             user_agent: `${this.metadata.name}/1`,
             timeout: 20,
@@ -325,11 +342,18 @@ export default class MuenchenWetterExtension extends Extension {
             GLib.source_remove(this._nowMarkerTimeoutId);
             this._nowMarkerTimeoutId = null;
         }
-        this._cancellable?.cancel();
+        if (this._searchTimeoutId)
+            GLib.source_remove(this._searchTimeoutId);
+        this._forecastCancellable?.cancel();
+        this._searchCancellable?.cancel();
         this._indicator?.destroy();
         this._indicator = null;
         this._session = null;
-        this._cancellable = null;
+        this._forecastCancellable = null;
+        this._searchCancellable = null;
+        this._settings = null;
+        this._locations = null;
+        this._activeLocation = null;
         this._chart = null;
         this._payload = null;
     }
@@ -342,7 +366,7 @@ export default class MuenchenWetterExtension extends Extension {
             icon_size: 17,
             style_class: 'mw-panel-icon',
         });
-        this._panelText = label('München …', 'mw-panel-text');
+        this._panelText = label(`${this._activeLocation.name} …`, 'mw-panel-text');
         panelBox.add_child(this._panelIcon);
         panelBox.add_child(this._panelText);
         this._indicator.add_child(panelBox);
@@ -361,12 +385,60 @@ export default class MuenchenWetterExtension extends Extension {
         });
         item.add_child(content);
 
+        this._locationBar = new St.BoxLayout({
+            style_class: 'mw-location-bar',
+            x_expand: true,
+        });
+        this._locationTabs = new St.BoxLayout({
+            style_class: 'mw-location-tabs',
+            x_expand: true,
+        });
+        this._locationBar.add_child(this._locationTabs);
+        this._removeLocationButton = new St.Button({
+            label: '−',
+            style_class: 'mw-location-remove-button',
+            can_focus: true,
+            visible: false,
+        });
+        this._removeLocationButton.connect('clicked', () =>
+            this._removeActiveLocation());
+        this._locationBar.add_child(this._removeLocationButton);
+        content.add_child(this._locationBar);
+
+        this._searchBox = new St.BoxLayout({
+            vertical: true,
+            style_class: 'mw-search-box',
+            x_expand: true,
+            visible: false,
+        });
+        this._searchEntry = new St.Entry({
+            hint_text: 'Ort suchen …',
+            can_focus: true,
+            style_class: 'mw-search-entry',
+            x_expand: true,
+        });
+        this._searchEntry.clutter_text.connect('text-changed', () =>
+            this._scheduleLocationSearch());
+        this._searchEntry.clutter_text.connect('activate', () =>
+            this._searchLocations());
+        this._searchHint = label(
+            'Mindestens zwei Buchstaben eingeben', 'mw-search-hint');
+        this._searchResults = new St.BoxLayout({
+            vertical: true,
+            style_class: 'mw-search-results',
+            x_expand: true,
+        });
+        this._searchBox.add_child(this._searchEntry);
+        this._searchBox.add_child(this._searchHint);
+        this._searchBox.add_child(this._searchResults);
+        content.add_child(this._searchBox);
+
         const header = new St.BoxLayout({
             style_class: 'mw-header',
             x_expand: true,
         });
         const currentBox = new St.BoxLayout({vertical: true, x_expand: true});
-        this._title = label(LOCATION.name, 'mw-title');
+        this._title = label(this._activeLocation.name, 'mw-title');
         this._condition = label('Wetter wird geladen …', 'mw-condition');
         currentBox.add_child(this._title);
         currentBox.add_child(this._condition);
@@ -415,6 +487,8 @@ export default class MuenchenWetterExtension extends Extension {
         this._status = label('Open-Meteo · lädt …', 'mw-status');
         content.add_child(this._status);
 
+        this._rebuildLocationTabs();
+
         this._indicator.menu.addMenuItem(item);
         this._indicator.menu.connect('open-state-changed', (_menu, isOpen) => {
             if (isOpen && GLib.get_monotonic_time() / 1e6 - this._lastUpdated >
@@ -450,31 +524,218 @@ export default class MuenchenWetterExtension extends Extension {
         this._bigIcon.gicon = icon;
     }
 
+    _rebuildLocationTabs() {
+        for (const child of this._locationTabs.get_children())
+            child.destroy();
+
+        this._locations.forEach((location, index) => {
+            const button = new St.Button({
+                label: location.name,
+                style_class: 'mw-location-button',
+                can_focus: true,
+                accessible_name: `${location.label || location.name} auswählen`,
+            });
+            if (index === this._activeLocationIndex)
+                button.add_style_pseudo_class('active');
+            button.connect('clicked', () => this._selectLocation(index));
+            this._locationTabs.add_child(button);
+        });
+
+        if (this._locations.length < MAX_LOCATIONS) {
+            const addButton = new St.Button({
+                label: '+ Ort',
+                style_class: 'mw-location-add-button',
+                can_focus: true,
+                accessible_name: 'Ort hinzufügen',
+            });
+            addButton.connect('clicked', () => this._setLocationPickerVisible(true));
+            this._locationTabs.add_child(addButton);
+        }
+
+        this._removeLocationButton.visible = this._locations.length > 1;
+        this._removeLocationButton.accessible_name =
+            `${this._activeLocation.name} entfernen`;
+    }
+
+    _setLocationPickerVisible(visible) {
+        this._searchBox.visible = visible;
+        if (!visible) {
+            this._searchRequestId++;
+            this._searchCancellable?.cancel();
+            this._searchEntry.set_text('');
+            this._clearSearchResults();
+            return;
+        }
+
+        this._searchHint.text = 'Mindestens zwei Buchstaben eingeben';
+        this._searchEntry.grab_key_focus();
+    }
+
+    _scheduleLocationSearch() {
+        if (this._searchTimeoutId) {
+            GLib.source_remove(this._searchTimeoutId);
+            this._searchTimeoutId = null;
+        }
+        this._searchTimeoutId = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT,
+            SEARCH_DELAY_MS,
+            () => {
+                this._searchTimeoutId = null;
+                this._searchLocations();
+                return GLib.SOURCE_REMOVE;
+            });
+    }
+
+    _clearSearchResults() {
+        for (const child of this._searchResults.get_children())
+            child.destroy();
+    }
+
+    _searchLocations() {
+        if (!this._searchBox.visible)
+            return;
+        const query = this._searchEntry.get_text().trim();
+        this._clearSearchResults();
+        this._searchCancellable?.cancel();
+        if (query.length < 2) {
+            this._searchHint.text = 'Mindestens zwei Buchstaben eingeben';
+            return;
+        }
+
+        const requestId = ++this._searchRequestId;
+        this._searchCancellable = new Gio.Cancellable();
+        this._searchHint.text = 'Suche …';
+        const message = Soup.Message.new('GET', buildGeocodingUrl(query));
+        this._session.send_and_read_async(
+            message,
+            GLib.PRIORITY_DEFAULT,
+            this._searchCancellable,
+            (session, result) => {
+                if (requestId !== this._searchRequestId || !this._indicator)
+                    return;
+                try {
+                    const bytes = session.send_and_read_finish(result);
+                    if (message.status_code !== Soup.Status.OK)
+                        throw new Error(`HTTP ${message.status_code}`);
+                    const results = (JSON.parse(
+                        new TextDecoder().decode(bytes.get_data())).results ?? [])
+                        .map(locationFromGeocodingResult)
+                        .filter(Boolean);
+                    this._renderLocationResults(results);
+                } catch (error) {
+                    if (!error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                        this._searchHint.text = 'Ortsuche derzeit nicht erreichbar';
+                }
+            });
+    }
+
+    _renderLocationResults(results) {
+        this._clearSearchResults();
+        if (!results.length) {
+            this._searchHint.text = 'Keine passenden Orte gefunden';
+            return;
+        }
+
+        this._searchHint.text = 'Treffer auswählen';
+        for (const location of results) {
+            const alreadySaved = this._locations.some(saved => saved.id === location.id);
+            const button = new St.Button({
+                label: alreadySaved ? `${location.label} · gespeichert` : location.label,
+                style_class: 'mw-search-result',
+                can_focus: true,
+                reactive: !alreadySaved,
+                accessible_name: location.label,
+                x_expand: true,
+            });
+            if (!alreadySaved)
+                button.connect('clicked', () => this._addLocation(location));
+            this._searchResults.add_child(button);
+        }
+    }
+
+    _addLocation(location) {
+        if (this._locations.length >= MAX_LOCATIONS)
+            return;
+        this._locations.push(location);
+        this._activeLocationIndex = this._locations.length - 1;
+        this._persistLocations();
+        this._setLocationPickerVisible(false);
+        this._applyActiveLocation();
+    }
+
+    _removeActiveLocation() {
+        if (this._locations.length < 2)
+            return;
+        this._locations.splice(this._activeLocationIndex, 1);
+        this._activeLocationIndex = Math.min(
+            this._activeLocationIndex, this._locations.length - 1);
+        this._persistLocations();
+        this._applyActiveLocation();
+    }
+
+    _selectLocation(index) {
+        if (index === this._activeLocationIndex)
+            return;
+        this._activeLocationIndex = index;
+        this._persistLocations();
+        this._applyActiveLocation();
+    }
+
+    _persistLocations() {
+        this._settings.set_string('locations', JSON.stringify(this._locations));
+        this._settings.set_int('active-location', this._activeLocationIndex);
+    }
+
+    _applyActiveLocation() {
+        this._activeLocation = this._locations[this._activeLocationIndex];
+        this._forecastCancellable?.cancel();
+        this._forecastRequestId++;
+        this._requestInFlight = false;
+        this._payload = null;
+        this._lastUpdated = 0;
+        this._title.text = this._activeLocation.name;
+        this._panelText.text = `${this._activeLocation.name} …`;
+        this._condition.text = 'Wetter wird geladen …';
+        this._temperature.text = '–°';
+        this._feels.value.text = '–°';
+        this._rain.value.text = '– %';
+        this._wind.value.text = '– km/h';
+        this._humidity.value.text = '– %';
+        this._setWeatherIcon('unknown');
+        this._chart.setForecast([]);
+        this._rebuildLocationTabs();
+        this._refresh(true);
+    }
+
     _refresh(force = false) {
-        if (this._requestInFlight)
+        if (this._requestInFlight && !force)
             return;
         if (!force && this._lastUpdated &&
             GLib.get_monotonic_time() / 1e6 - this._lastUpdated < 60)
             return;
 
+        this._forecastCancellable?.cancel();
+        const requestId = ++this._forecastRequestId;
+        const location = this._activeLocation;
+        this._forecastCancellable = new Gio.Cancellable();
         this._requestInFlight = true;
         this._refreshButton?.add_style_pseudo_class('active');
         this._status.text = 'Open-Meteo · aktualisiert …';
         const url = buildForecastUrl(
-            LOCATION.latitude,
-            LOCATION.longitude,
-            LOCATION.timezone);
+            location.latitude,
+            location.longitude,
+            location.timezone);
         const message = Soup.Message.new('GET', url);
 
         this._session.send_and_read_async(
             message,
             GLib.PRIORITY_DEFAULT,
-            this._cancellable,
+            this._forecastCancellable,
             (session, result) => {
+                if (requestId !== this._forecastRequestId || !this._indicator)
+                    return;
                 this._requestInFlight = false;
                 this._refreshButton?.remove_style_pseudo_class('active');
-                if (!this._indicator)
-                    return;
 
                 try {
                     const bytes = session.send_and_read_finish(result);
@@ -504,7 +765,7 @@ export default class MuenchenWetterExtension extends Extension {
         const rainChance = upcomingRain.length ? Math.max(...upcomingRain) : 0;
 
         this._setWeatherIcon(iconName);
-        this._panelText.text = `${round(current.temperature_2m)}° München`;
+        this._panelText.text = `${round(current.temperature_2m)}° ${this._activeLocation.name}`;
         this._temperature.text = `${round(current.temperature_2m)}°`;
         this._condition.text = description;
         this._feels.value.text = `${round(current.apparent_temperature)}°`;
@@ -526,7 +787,7 @@ export default class MuenchenWetterExtension extends Extension {
             : 'Wetterdaten derzeit nicht erreichbar';
         if (!this._payload) {
             this._setWeatherIcon('unknown');
-            this._panelText.text = 'Wetter';
+            this._panelText.text = `${this._activeLocation.name} · Wetter`;
             this._condition.text = 'Keine Verbindung';
         }
     }

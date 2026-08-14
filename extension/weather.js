@@ -64,6 +64,55 @@ export function buildForecastUrl(latitude, longitude, timezone = 'Europe/Berlin'
     return `https://api.open-meteo.com/v1/forecast?${params.join('&')}`;
 }
 
+export function buildGeocodingUrl(query, count = 8) {
+    const params = [
+        `name=${encodeURIComponent(query.trim())}`,
+        `count=${count}`,
+        'language=de',
+        'format=json',
+    ];
+    return `https://geocoding-api.open-meteo.com/v1/search?${params.join('&')}`;
+}
+
+export function locationFromGeocodingResult(result) {
+    if (!result?.name || !Number.isFinite(Number(result.latitude)) ||
+        !Number.isFinite(Number(result.longitude)))
+        return null;
+
+    const detail = [result.admin1, result.country].filter(Boolean);
+    return {
+        id: `${Number(result.latitude).toFixed(4)},${Number(result.longitude).toFixed(4)}`,
+        name: result.name,
+        label: [result.name, ...detail].join(', '),
+        latitude: Number(result.latitude),
+        longitude: Number(result.longitude),
+        timezone: result.timezone || 'auto',
+    };
+}
+
+export function parseLocations(value, fallback) {
+    try {
+        const locations = JSON.parse(value);
+        if (!Array.isArray(locations))
+            throw new Error('locations must be an array');
+
+        const validLocations = locations
+            .map(location => ({
+                ...location,
+                id: location.id || `${Number(location.latitude).toFixed(4)},${Number(location.longitude).toFixed(4)}`,
+                latitude: Number(location.latitude),
+                longitude: Number(location.longitude),
+                timezone: location.timezone || 'auto',
+            }))
+            .filter(location => location.name &&
+                Number.isFinite(location.latitude) &&
+                Number.isFinite(location.longitude));
+        return validLocations.length ? validLocations.slice(0, 3) : fallback;
+    } catch {
+        return fallback;
+    }
+}
+
 export function chartForecast(payload, hours = 72, now = new Date()) {
     if (!payload?.hourly?.time?.length)
         return [];
