@@ -20,14 +20,28 @@ No API key is required.
 - Automatic refresh every 20 minutes and a manual refresh button
 - German on German-language systems; English on all other systems
 
-## Install locally
+## Install
+
+1. Download `wetterkurve@wean.de.shell-extension.zip` from the
+   [latest GitHub release](https://github.com/vibecodingwean/wetterkurve/releases/latest).
+2. Install it from a terminal:
+
+   ```bash
+   gnome-extensions install --force ~/Downloads/wetterkurve@wean.de.shell-extension.zip
+   ```
+
+3. Enable **Wetterkurve** in the GNOME **Extensions** app.
+
+On Wayland, log out and back in once if GNOME Shell does not discover the
+extension immediately.
+
+### Development install
 
 ```bash
 ./install.sh
 ```
 
-On Wayland, log out and back in once if GNOME Shell does not discover the
-extension immediately. Manage it afterwards in the **Extensions** app.
+This creates a development symlink instead of installing a release ZIP.
 
 ## Develop and package
 
@@ -45,10 +59,10 @@ The repository contains an intentionally small release gate:
 1. Run `./scripts/install-git-hooks.sh` once to enable the versioned local
    check on a developer machine.
 2. Tag a tested commit as `vX.Y.Z` and push the tag.
-3. GitHub Actions repeats the verification and tests, packages the ZIP, and
-   waits for the protected `gnome-extension-store` environment approval.
-4. After approval it uploads the package to extensions.gnome.org and creates a
-   GitHub release.
+3. GitHub Actions repeats the verification and tests, then creates a GitHub
+   release with the installable ZIP attached.
+4. Submit a tested tag to extensions.gnome.org manually through the protected
+   **Submit Wetterkurve to GNOME Extensions** workflow.
 
 Configure the `EGO_USERNAME` and `EGO_PASSWORD` secrets only in that protected
 GitHub environment. Details and the first-release checklist are in

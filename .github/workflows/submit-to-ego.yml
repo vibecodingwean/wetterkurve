@@ -1,0 +1,40 @@
+name: Submit Wetterkurve to GNOME Extensions
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tested release tag to submit, for example v1.0.1'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    environment: gnome-extension-store
+    env:
+      EGO_USERNAME: ${{ secrets.EGO_USERNAME }}
+      EGO_PASSWORD: ${{ secrets.EGO_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - name: Install submission tools
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git validator gnome-shell glib2 nodejs zip
+      - name: Verify and package
+        run: ./test.sh
+      - name: Upload to extensions.gnome.org
+        run: |
+          test -n "$EGO_USERNAME"
+          test -n "$EGO_PASSWORD"
+          printf '%s' "$EGO_PASSWORD" | \
+            gnome-extensions upload --accept-tos --user "$EGO_USERNAME" \
+              --password-file /dev/stdin \
+              dist/wetterkurve@wean.de.shell-extension.zip
