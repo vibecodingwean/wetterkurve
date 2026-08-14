@@ -49,19 +49,15 @@ This creates a development symlink instead of installing a release ZIP.
 ./test.sh
 ```
 
-This compiles the local GSettings schema, runs the tests and validation, and
-creates `dist/wetterkurve@wean.de.shell-extension.zip`.
+This compiles the local GSettings schema, runs the tests, and creates
+`dist/wetterkurve@wean.de.shell-extension.zip`.
 
 ## Release
 
-The repository contains an intentionally small release gate:
-
-1. Run `./scripts/install-git-hooks.sh` once to enable the versioned local
-   check on a developer machine.
-2. Tag a tested commit as `vX.Y.Z` and push the tag.
-3. GitHub Actions repeats the verification and tests, then creates a GitHub
-   release with the installable ZIP attached.
-4. Submit a tested tag to extensions.gnome.org manually through the protected
+1. Tag a tested commit as `vX.Y.Z` and push the tag.
+2. GitHub Actions runs the tests, then creates a GitHub release with the
+   installable ZIP attached.
+3. Submit a tested tag to extensions.gnome.org manually through the protected
    **Submit Wetterkurve to GNOME Extensions** workflow.
 
 Configure the `EGO_USERNAME` and `EGO_PASSWORD` secrets only in that protected
