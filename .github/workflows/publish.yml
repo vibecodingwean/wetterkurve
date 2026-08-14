@@ -1,0 +1,23 @@
+name: Verify Wetterkurve release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    container: fedora:44
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install verification tools
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git glib2 nodejs zip
+      - name: Verify and package
+        run: ./test.sh

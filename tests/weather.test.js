@@ -9,6 +9,7 @@ import {
     validateForecast,
     weatherInfo,
 } from '../extension/weather.js';
+import {languageForLocale, text} from '../extension/language.js';
 
 function assert(condition, message) {
     if (!condition)
@@ -50,7 +51,7 @@ assert(forecast[0].time === '2026-07-31T00:00',
     'chart must start at midnight today');
 assert(forecast.at(-1).time === '2026-08-02T23:00',
     'chart must end at the last hour of the third day');
-const days = chartDaySegments(forecast);
+const days = chartDaySegments(forecast, 'de-DE');
 assert(days.length === 3, 'chart must contain three day segments');
 assert(days[0].label === 'Freitag' && days[1].label === 'Samstag' &&
     days[2].label === 'Sonntag', 'day segment labels are wrong');
@@ -58,8 +59,10 @@ assert(days.every(day => day.end - day.start === 24),
     'every full day segment must span 24 hourly values');
 assert(days[0].start === 0 && days.at(-1).end === 72,
     'day segments must cover the complete chart');
-assert(weatherInfo(0)[1] === 'Klar', 'WMO mapping is wrong');
-assert(weatherInfo(1234)[1] === 'Unbekannt', 'WMO fallback is wrong');
+assert(weatherInfo(0, 'de')[1] === 'Klar', 'German WMO mapping is wrong');
+assert(weatherInfo(0)[1] === 'Clear', 'English WMO mapping is wrong');
+assert(weatherInfo(1234, 'de')[1] === 'Unbekannt', 'German WMO fallback is wrong');
+assert(weatherInfo(1234)[1] === 'Unknown', 'English WMO fallback is wrong');
 assert(weatherInfo(0)[2] === 'clear', 'clear weather icon is wrong');
 assert(weatherInfo(63)[2] === 'rain', 'rain weather icon is wrong');
 assert(weatherInfo(1234)[2] === 'unknown', 'weather icon fallback is wrong');
@@ -76,7 +79,9 @@ assert(geocodingUrl.startsWith('https://geocoding-api.open-meteo.com/v1/search?'
     'geocoding URL endpoint is wrong');
 assert(geocodingUrl.includes('name=S%C3%A3o%20Paulo'),
     'geocoding search must be URL encoded');
-assert(geocodingUrl.includes('language=de'), 'geocoding language is missing');
+assert(geocodingUrl.includes('language=en'), 'English geocoding language is missing');
+assert(buildGeocodingUrl('Berlin', 8, 'de').includes('language=de'),
+    'German geocoding language is missing');
 
 const berlin = locationFromGeocodingResult({
     name: 'Berlin',
@@ -98,6 +103,11 @@ assert(parsedLocations.length === 1 && parsedLocations[0].name === 'Berlin',
     'saved locations were not parsed');
 assert(parseLocations('invalid JSON', fallback) === fallback,
     'invalid saved locations did not use fallback');
+assert(languageForLocale('de_DE') === 'de', 'German locale was not detected');
+assert(languageForLocale('en_GB') === 'en', 'English locale was not detected');
+assert(languageForLocale('fr_FR') === 'en', 'non-German locale must use English');
+assert(text('en', 'removeLocation', {location: 'Munich'}) === 'Remove Munich',
+    'English replacement text is wrong');
 
 let invalidRejected = false;
 try {

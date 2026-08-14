@@ -1,41 +1,59 @@
-# München Wetter
+# Wetterkurve
 
-Eine native GNOME-Shell-Erweiterung für eine kompakte Wetterübersicht für bis
-zu drei gespeicherte Orte. Im Panel stehen Wetterzustand und Temperatur. Ein Klick öffnet eine
-Drei-Tage-Ansicht von heute 00:00 Uhr bis übermorgen 23:00 Uhr mit geglätteter
-Temperaturkurve, gefühlter Temperatur, Regenwahrscheinlichkeit und
-Niederschlagsmenge. Eine farblich wechselnde Tagesleiste oberhalb der Kurven
-ordnet jeden 24-Stunden-Abschnitt dem ausgeschriebenen Wochentag zu.
+Wetterkurve is a native GNOME Shell extension that keeps a compact weather
+overview for up to three saved locations in the top panel. Its popup shows a
+three-day chart from today at midnight to 23:00 two days later, including
+temperature, feels-like temperature, precipitation probability, precipitation,
+and an alternating weekday strip.
 
-Die Daten kommen von [Open-Meteo](https://open-meteo.com/) und benötigen
-keinen API-Schlüssel.
+Forecasts and location search come directly from the [Open-Meteo API](https://open-meteo.com/).
+No API key is required.
 
-## Installation
+![Wetterkurve showing its three-day weather chart](assets/wetterkurve-overview.png)
+
+## Features
+
+- Current conditions and temperature in the top panel
+- Save and switch between up to three locations
+- Live location search
+- Temperature and feels-like curves plus precipitation information
+- Automatic refresh every 20 minutes and a manual refresh button
+- German on German-language systems; English on all other systems
+
+## Install locally
 
 ```bash
 ./install.sh
 ```
 
-Unter Wayland muss man sich nach der ersten Installation gegebenenfalls einmal
-ab- und wieder anmelden. Danach kann die Erweiterung auch mit der App
-„Erweiterungen“ ein- und ausgeschaltet werden.
+On Wayland, log out and back in once if GNOME Shell does not discover the
+extension immediately. Manage it afterwards in the **Extensions** app.
 
-## Bedienung
-
-- Klick auf die Wetteranzeige: Detailansicht öffnen
-- „+ Ort“: per Live-Freitextsuche einen Ort hinzufügen (maximal drei)
-- Ortsname im Popup: zwischen gespeicherten Orten wechseln; „−“ entfernt den
-  aktuell ausgewählten Ort, solange mindestens ein Ort bleibt
-- Kreispfeil: Prognose sofort aktualisieren
-- Automatische Aktualisierung: alle 20 Minuten
-
-Die Datenquelle und der Zeitpunkt der letzten Aktualisierung stehen unten im
-Popup.
-
-## Entwicklung
+## Develop and package
 
 ```bash
 ./test.sh
 ```
 
-Getestet für GNOME Shell 50.
+This compiles the local GSettings schema, runs the tests and validation, and
+creates `dist/wetterkurve@wean.de.shell-extension.zip`.
+
+## Release
+
+The repository contains an intentionally small release gate:
+
+1. Run `./scripts/install-git-hooks.sh` once to enable the versioned local
+   check on a developer machine.
+2. Tag a tested commit as `vX.Y.Z` and push the tag.
+3. GitHub Actions repeats the verification and tests, packages the ZIP, and
+   waits for the protected `gnome-extension-store` environment approval.
+4. After approval it uploads the package to extensions.gnome.org and creates a
+   GitHub release.
+
+Configure the `EGO_USERNAME` and `EGO_PASSWORD` secrets only in that protected
+GitHub environment. Details and the first-release checklist are in
+[docs/PUBLISHING.md](docs/PUBLISHING.md).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
