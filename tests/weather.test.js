@@ -117,4 +117,4 @@ try {
 }
 assert(invalidRejected, 'invalid forecast was accepted');
 
-print('weather.test.js: OK');
+console.log('weather.test.js: OK');
