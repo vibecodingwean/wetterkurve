@@ -2,6 +2,7 @@
   "uuid": "wetterkurve@wean.de",
   "name": "Wetterkurve",
   "description": "A compact three-day weather chart for up to three saved locations",
+  "url": "https://github.com/vibecodingwean/wetterkurve",
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.wetterkurve"
 }
