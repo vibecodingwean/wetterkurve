@@ -15,7 +15,7 @@ jobs:
       EGO_USERNAME: ${{ secrets.EGO_USERNAME }}
       EGO_PASSWORD: ${{ secrets.EGO_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Verify and package
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace fedora:latest bash -ec '
