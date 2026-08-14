@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Run the release gate in Fedora
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace fedora:latest bash -ec '
