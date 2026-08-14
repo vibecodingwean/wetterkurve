@@ -1,4 +1,4 @@
-name: Publish Wetterkurve
+name: Create Wetterkurve release
 
 on:
   push:
@@ -8,34 +8,19 @@ permissions:
   contents: write
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     container: fedora:44
-    environment: gnome-extension-store
-    env:
-      EGO_USERNAME: ${{ secrets.EGO_USERNAME }}
-      EGO_PASSWORD: ${{ secrets.EGO_PASSWORD }}
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Install publishing tools
+      - name: Install release tools
         run: |
           dnf install -y --setopt=install_weak_deps=False \
-            git validator gnome-shell glib2 nodejs zip gh
+            git validator glib2 nodejs zip gh
       - name: Verify and package
         run: ./test.sh
-      - name: Upload to extensions.gnome.org
-        run: |
-          test -n "$EGO_USERNAME"
-          test -n "$EGO_PASSWORD"
-          password_file="$(mktemp)"
-          trap 'rm -f -- "$password_file"' EXIT
-          umask 077
-          printf '%s' "$EGO_PASSWORD" > "$password_file"
-          gnome-extensions upload --accept-tos --user "$EGO_USERNAME" \
-            --password-file "$password_file" \
-            dist/wetterkurve@wean.de.shell-extension.zip
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
