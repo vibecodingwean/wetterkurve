@@ -35,6 +35,27 @@ No API key is required.
 On Wayland, log out and back in once if GNOME Shell does not discover the
 extension immediately.
 
+## Windows 11
+
+The same Open-Meteo forecast runs on Windows 11 as a tray app, analogous to the
+GNOME panel indicator: the current temperature stays near the clock, and a
+click opens the three-day chart. Windows Widgets cannot replace that taskbar
+weather button, so Wetterkurve is not installed into the Widgets Board.
+
+On a Windows 11 machine with the .NET 10 SDK:
+
+```powershell
+.\windows\install.ps1 -LaunchDesktop
+```
+
+This publishes `Wetterkurve.exe` to `%LOCALAPPDATA%\Wetterkurve\app`. Closing
+the window hides it in the notification area; a left-click restores it.
+
+A prebuilt x64 build is in [`windows/release/Wetterkurve/Wetterkurve.exe`](windows/release/Wetterkurve/Wetterkurve.exe).
+
+`windows/deploy-bequiet.sh` syncs the Windows project to `bequiet` and runs the
+install script there.
+
 ### Development install
 
 ```bash

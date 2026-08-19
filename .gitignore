@@ -1,5 +1,12 @@
 /_dev_tools/
 /dist/
+windows/**/bin/
+windows/**/obj/
+windows/**/*.user
+windows/**/*.pdb
+*.msix
+*.msixbundle
+*.appx
 *.zip
 extension/schemas/gschemas.compiled
 
