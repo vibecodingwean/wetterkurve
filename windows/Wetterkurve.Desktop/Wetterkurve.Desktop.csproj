@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Wetterkurve.Desktop</RootNamespace>
+    <AssemblyName>Wetterkurve</AssemblyName>
+    <ApplicationIcon>Assets\wetterkurve.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <Product>Wetterkurve</Product>
+    <Company>wean.de</Company>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Wetterkurve.Core\Wetterkurve.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\icons\*.png" />
+    <Content Include="Assets\wetterkurve.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
