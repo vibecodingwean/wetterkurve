@@ -10,6 +10,11 @@ windows/**/*.pdb
 *.zip
 extension/schemas/gschemas.compiled
 
+android/.gradle/
+android/**/build/
+android/local.properties
+android/.kotlin/
+
 # Secrets and local credential material
 .env
 .env.*

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wetterkurve</string>
+    <string name="compact_widget_description">Temperaturleiste</string>
+    <string name="chart_widget_description">3-Tage-Kurve</string>
+</resources>

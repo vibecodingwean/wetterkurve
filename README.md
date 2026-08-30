@@ -53,6 +53,23 @@ the window hides it in the notification area; a left-click restores it.
 
 A prebuilt x64 build is in [`windows/release/Wetterkurve/Wetterkurve.exe`](windows/release/Wetterkurve/Wetterkurve.exe).
 
+## Android
+
+The same Open-Meteo forecast runs on Android as homescreen widgets. The app
+stores up to three locations. A thin full-width widget shows the current
+temperature; a second widget shows the three-day chart.
+
+On a machine with JDK 17 or 21 and an Android SDK:
+
+```bash
+cd android
+./gradlew :core:test :app:assembleDebug
+```
+
+Install `android/app/build/outputs/apk/debug/app-debug.apk`, then add a
+**Wetterkurve** widget from the launcher widget picker. Details are in
+[`android/README.md`](android/README.md).
+
 `windows/deploy-bequiet.sh` syncs the Windows project to `bequiet` and runs the
 install script there.
 
