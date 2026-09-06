@@ -10,11 +10,26 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "de.wean.wetterkurve"
+        applicationId = "com.wetterkurve"
         minSdk = 26
         targetSdk = 36
         versionCode = 22
         versionName = "1.1.10-cloud"
+    }
+
+    signingConfigs {
+        create("release") {
+            val propsFile = rootProject.file("key.properties")
+            if (propsFile.isFile) {
+                val props = java.util.Properties().apply {
+                    propsFile.inputStream().use { load(it) }
+                }
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -24,6 +39,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            val propsFile = rootProject.file("key.properties")
+            if (propsFile.isFile) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
