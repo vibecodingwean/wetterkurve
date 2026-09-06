@@ -54,6 +54,7 @@ export function buildForecastUrl(latitude, longitude, timezone = 'Europe/Berlin'
         'precipitation',
         'weather_code',
         'wind_speed_10m',
+        'cloud_cover',
     ].join(',');
     const params = [
         `latitude=${latitude}`,
@@ -138,6 +139,7 @@ export function chartForecast(payload, hours = 72, now = new Date()) {
             precipitation: Number(h.precipitation[i] ?? 0),
             weatherCode: Number(h.weather_code[i]),
             wind: Number(h.wind_speed_10m[i]),
+            cloudCover: Number(h.cloud_cover[i] ?? 0),
         };
     });
 }
@@ -189,6 +191,7 @@ export function validateForecast(payload) {
         'precipitation',
         'weather_code',
         'wind_speed_10m',
+        'cloud_cover',
     ];
     if (requiredCurrent.some(key => payload.current[key] === undefined) ||
         requiredHourly.some(key => !Array.isArray(payload.hourly[key])))

@@ -41,6 +41,7 @@ const payload = {
         precipitation: values,
         weather_code: values,
         wind_speed_10m: values,
+        cloud_cover: values,
     },
 };
 
@@ -51,6 +52,8 @@ assert(forecast[0].time === '2026-07-31T00:00',
     'chart must start at midnight today');
 assert(forecast.at(-1).time === '2026-08-02T23:00',
     'chart must end at the last hour of the third day');
+assert(forecast[0].cloudCover === 24, 'chart must read hourly cloud cover');
+assert(forecast[0].wind === 24, 'chart must read hourly wind speed');
 const days = chartDaySegments(forecast, 'de-DE');
 assert(days.length === 3, 'chart must contain three day segments');
 assert(days.map(day => day.key).join(',') ===
@@ -75,6 +78,7 @@ const url = buildForecastUrl(48.137, 11.576);
 assert(url.startsWith('https://api.open-meteo.com/v1/forecast?'),
     'forecast URL endpoint is wrong');
 assert(url.includes('forecast_days=3'), 'forecast URL range is wrong');
+assert(url.includes('cloud_cover'), 'forecast URL must request cloud cover');
 assert(url.includes('timezone=Europe%2FBerlin'), 'forecast URL timezone is wrong');
 
 const geocodingUrl = buildGeocodingUrl('São Paulo');
@@ -111,6 +115,8 @@ assert(languageForLocale('en_GB') === 'en', 'English locale was not detected');
 assert(languageForLocale('fr_FR') === 'en', 'non-German locale must use English');
 assert(text('en', 'removeLocation', {location: 'Munich'}) === 'Remove Munich',
     'English replacement text is wrong');
+assert(text('de', 'clouds') === 'Wolke', 'German cloud label is wrong');
+assert(text('en', 'clouds') === 'Cloud', 'English cloud label is wrong');
 
 let invalidRejected = false;
 try {

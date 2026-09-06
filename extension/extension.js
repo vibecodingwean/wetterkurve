@@ -52,6 +52,8 @@ const DAY_STRIP_COLORS = [
     [0.16, 0.34, 0.56, 0.82],
     [0.10, 0.22, 0.39, 0.88],
 ];
+const DAY_STRIP_BOTTOM = 30;
+const WIND_COLOR = [0.00, 226 / 255, 114 / 255, 1]; // #00E272
 
 function label(text, styleClass) {
     return new St.Label({
@@ -70,6 +72,8 @@ class ForecastChart extends St.DrawingArea {
         });
         this._forecast = [];
         this._locale = 'en-US';
+        this._showClouds = true;
+        this._showWind = true;
         this.connect('repaint', area => this._repaint(area));
     }
 
@@ -83,6 +87,12 @@ class ForecastChart extends St.DrawingArea {
         this.queue_repaint();
     }
 
+    setLayers(showClouds, showWind) {
+        this._showClouds = showClouds;
+        this._showWind = showWind;
+        this.queue_repaint();
+    }
+
     _repaint(area) {
         const cr = area.get_context();
         const [width, height] = area.get_surface_size();
@@ -90,7 +100,15 @@ class ForecastChart extends St.DrawingArea {
         if (data.length < 2 || width < 100 || height < 100)
             return;
 
-        const plot = {left: 36, top: 40, right: width - 16, bottom: height - 42};
+        const stripBottom = DAY_STRIP_BOTTOM;
+        const cloudTop = stripBottom + 4;
+        const cloudBottom = this._showClouds ? cloudTop + 24 : stripBottom;
+        const plot = {
+            left: 36,
+            top: cloudBottom + 10,
+            right: width - 28,
+            bottom: height - 42,
+        };
         const plotWidth = plot.right - plot.left;
         const plotHeight = plot.bottom - plot.top;
         const temperatures = data.flatMap(point =>
@@ -112,6 +130,8 @@ class ForecastChart extends St.DrawingArea {
         cr.fill();
 
         this._drawDayStrip(cr, data, plot);
+        if (this._showClouds)
+            this._drawCloudStrip(cr, data, x, cloudTop, cloudBottom);
 
         for (let i = 0; i < data.length - 1; i++) {
             const hour = new Date(data[i].time).getHours();
@@ -188,6 +208,21 @@ class ForecastChart extends St.DrawingArea {
         this._smoothLine(cr, data.map(point => point.temperature), x, y,
             temperatureGradient, 3.25, false, [0.02, 0.04, 0.08, 0.82]);
 
+        if (this._showWind) {
+            const maxWind = Math.max(20,
+                Math.ceil(Math.max(...data.map(point => point.wind)) / 5) * 5);
+            const yWind = value =>
+                plot.bottom - value / maxWind * plotHeight;
+            this._smoothLine(cr, data.map(point => point.wind), x, yWind,
+                WIND_COLOR, 2, false, [0.00, 0.08, 0.05, 0.70]);
+            cr.setSourceRGBA(...WIND_COLOR);
+            cr.setFontSize(10);
+            for (let tick = 0; tick <= maxWind; tick += 5) {
+                cr.moveTo(plot.right + 4, yWind(tick) + 3);
+                cr.showText(`${tick}`);
+            }
+        }
+
         data.forEach((point, i) => {
             const date = new Date(point.time);
             const hour = date.getHours();
@@ -224,9 +259,32 @@ class ForecastChart extends St.DrawingArea {
         }
     }
 
+    _drawCloudStrip(cr, data, x, cloudTop, cloudBottom) {
+        const dayPlot = [26 / 255, 32 / 255, 44 / 255];
+        const nightPlot = [29 / 255, 50 / 255, 92 / 255];
+        const cloudGray = [200 / 255, 200 / 255, 200 / 255];
+        for (let i = 0; i < data.length - 1; i++) {
+            const hour = new Date(data[i].time).getHours();
+            const night = hour >= 21 || hour < 6;
+            const cover = Math.min(100, Math.max(0, data[i].cloudCover ?? 0)) / 100;
+            const base = night ? nightPlot : dayPlot;
+            cr.setSourceRGB(
+                base[0] + (cloudGray[0] - base[0]) * cover,
+                base[1] + (cloudGray[1] - base[1]) * cover,
+                base[2] + (cloudGray[2] - base[2]) * cover);
+            cr.rectangle(x(i), cloudTop, x(i + 1) - x(i) + 1, cloudBottom - cloudTop);
+            cr.fill();
+        }
+        cr.setSourceRGBA(0.86, 0.86, 0.86, 0.31);
+        cr.setLineWidth(1);
+        cr.moveTo(x(0), cloudTop);
+        cr.lineTo(x(data.length - 1), cloudTop);
+        cr.stroke();
+    }
+
     _drawDayStrip(cr, data, plot) {
         const stripTop = 6;
-        const stripBottom = 30;
+        const stripBottom = DAY_STRIP_BOTTOM;
         const stripHeight = stripBottom - stripTop;
         const plotWidth = plot.right - plot.left;
         const days = chartDaySegments(data, this._locale);
@@ -319,6 +377,8 @@ export default class WetterkurveExtension extends Extension {
         this._activeLocationIndex = Math.min(
             this._settings.get_int('active-location'), this._locations.length - 1);
         this._activeLocation = this._locations[this._activeLocationIndex];
+        this._showClouds = this._settings.get_boolean('show-clouds');
+        this._showWind = this._settings.get_boolean('show-wind');
         this._session = new Soup.Session({
             user_agent: `${this.metadata.name}/1`,
             timeout: 20,
@@ -498,8 +558,20 @@ export default class WetterkurveExtension extends Extension {
         chartHeading.add_child(legend);
         content.add_child(chartHeading);
 
+        const layers = new St.BoxLayout({
+            style_class: 'mw-layers',
+            x_expand: true,
+        });
+        this._cloudToggle = this._layerButton('clouds', () => this._toggleClouds());
+        this._windToggle = this._layerButton('wind', () => this._toggleWind());
+        layers.add_child(this._cloudToggle);
+        layers.add_child(this._windToggle);
+        content.add_child(layers);
+
         this._chart = new ForecastChart();
         this._chart.setLocale(this._locale);
+        this._chart.setLayers(this._showClouds, this._showWind);
+        this._updateLayerButtons();
         content.add_child(this._chart);
         this._status = label(this._t('loading'), 'mw-status');
         content.add_child(this._status);
@@ -512,6 +584,42 @@ export default class WetterkurveExtension extends Extension {
                 STALE_SECONDS)
                 this._refresh();
         });
+    }
+
+    _layerButton(key, onClicked) {
+        const button = new St.Button({
+            label: this._t(key),
+            style_class: 'mw-layer-button',
+            can_focus: true,
+        });
+        button.connect('clicked', onClicked);
+        return button;
+    }
+
+    _updateLayerButtons() {
+        this._setLayerActive(this._cloudToggle, this._showClouds);
+        this._setLayerActive(this._windToggle, this._showWind);
+    }
+
+    _setLayerActive(button, on) {
+        if (on)
+            button.add_style_pseudo_class('active');
+        else
+            button.remove_style_pseudo_class('active');
+    }
+
+    _toggleClouds() {
+        this._showClouds = !this._showClouds;
+        this._settings.set_boolean('show-clouds', this._showClouds);
+        this._updateLayerButtons();
+        this._chart.setLayers(this._showClouds, this._showWind);
+    }
+
+    _toggleWind() {
+        this._showWind = !this._showWind;
+        this._settings.set_boolean('show-wind', this._showWind);
+        this._updateLayerButtons();
+        this._chart.setLayers(this._showClouds, this._showWind);
     }
 
     _stat(name, value) {

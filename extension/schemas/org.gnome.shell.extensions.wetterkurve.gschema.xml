@@ -10,5 +10,13 @@
       <range min="0" max="2"/>
       <summary>Index of the selected weather location</summary>
     </key>
+    <key name="show-clouds" type="b">
+      <default>true</default>
+      <summary>Show the cloud-cover band on the forecast chart</summary>
+    </key>
+    <key name="show-wind" type="b">
+      <default>true</default>
+      <summary>Show the wind curve on the forecast chart</summary>
+    </key>
   </schema>
 </schemalist>

@@ -172,6 +172,26 @@
   spacing: 10px;
 }
 
+.mw-layers {
+  spacing: 7px;
+}
+
+.mw-layer-button {
+  color: #eaf3ff;
+  border: 1px solid rgba(142, 205, 255, 0.40);
+  border-radius: 9px;
+  padding: 5px 9px;
+}
+
+.mw-layer-button:hover,
+.mw-layer-button:focus {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.mw-layer-button:active {
+  background-color: rgba(73, 157, 255, 0.55);
+}
+
 .mw-section-title {
   color: #ffffff;
   font-size: 14px;
@@ -188,7 +208,7 @@
   background-color: rgba(8, 12, 22, 0.30);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  height: 250px;
+  height: 278px;
 }
 
 .mw-status {
