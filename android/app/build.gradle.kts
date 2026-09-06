@@ -21,13 +21,16 @@ android {
         create("release") {
             val propsFile = rootProject.file("key.properties")
             if (propsFile.isFile) {
-                val props = java.util.Properties().apply {
-                    propsFile.inputStream().use { load(it) }
-                }
-                storeFile = file(props.getProperty("storeFile"))
-                storePassword = props.getProperty("storePassword")
-                keyAlias = props.getProperty("keyAlias")
-                keyPassword = props.getProperty("keyPassword")
+                val props = propsFile.readLines()
+                    .mapNotNull { line ->
+                        val parts = line.split("=", limit = 2)
+                        if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
+                    }
+                    .toMap()
+                storeFile = file(props.getValue("storeFile"))
+                storePassword = props.getValue("storePassword")
+                keyAlias = props.getValue("keyAlias")
+                keyPassword = props.getValue("keyPassword")
             }
         }
     }
