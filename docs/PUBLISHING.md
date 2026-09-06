@@ -12,8 +12,10 @@
 5. Create and push a signed or annotated tag, for example `v1.0.0`. The
    **Create Wetterkurve release** workflow repeats the tests and attaches both
    the GNOME Shell ZIP and the Windows x64 desktop build
-   (`Wetterkurve-Windows-x64.zip` from `windows/release/Wetterkurve/`). A
-   GitHub release is incomplete without that Windows binary.
+   (`Wetterkurve-Windows-x64.zip` from `windows/release/Wetterkurve/`). Upload
+   the Android debug APK (`Wetterkurve-android-<versionName>.apk`) to the same
+   GitHub release. A GitHub release is incomplete without the GNOME ZIP, the
+   Windows binary, and the Android APK.
 6. To update extensions.gnome.org, start **Submit Wetterkurve to GNOME
    Extensions** from the Actions tab, enter that tested tag, and approve the
    protected `gnome-extension-store` environment only after reviewing its test

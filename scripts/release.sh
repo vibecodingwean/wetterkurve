@@ -11,6 +11,18 @@ mkdir -p "$PROJECT_DIR/dist"
 rm -f "$windows_zip"
 (cd "$PROJECT_DIR/windows/release" && zip -r "$windows_zip" Wetterkurve)
 
+apk_debug="$PROJECT_DIR/android/app/build/outputs/apk/debug/app-debug.apk"
+apk_name=""
+if [ -f "$apk_debug" ]; then
+  apk_version="$(awk -F'"' '/versionName[[:space:]]*=/ {print $2; exit}' \
+    "$PROJECT_DIR/android/app/build.gradle.kts")"
+  apk_name="$PROJECT_DIR/dist/Wetterkurve-android-${apk_version}.apk"
+  cp -f -- "$apk_debug" "$apk_name"
+fi
+
 printf 'Release packages are ready:\n  %s\n  %s\n' \
   "$PROJECT_DIR/dist/wetterkurve@wean.de.shell-extension.zip" \
   "$windows_zip"
+if [ -n "$apk_name" ]; then
+  printf '  %s\n' "$apk_name"
+fi
