@@ -361,7 +361,7 @@ object ChartRenderer {
             val b = (base[2] + (cloudGrayRgb[2] - base[2]) * cover).toInt()
             canvas.drawRect(x(i), cloudTop, x(i + 1) + 1, cloudBottom, paint(Color.rgb(r, g, b)))
         }
-        canvas.drawRect(x(0), cloudTop, x(data.lastIndex), cloudBottom, border)
+        canvas.drawLine(x(0), cloudTop, x(data.lastIndex), cloudTop, border)
     }
 
     private fun strokeSmoothLine(

@@ -53,6 +53,14 @@ class WidgetLayoutTest {
         assertTrue(renderer, renderer.contains("dayPlotRgb"))
         assertTrue(renderer, renderer.contains("nightPlotRgb"))
         assertTrue(renderer, renderer.contains("cloudGrayRgb"))
+        assertTrue(
+            renderer,
+            renderer.contains("canvas.drawLine(x(0), cloudTop, x(data.lastIndex), cloudTop, border)"),
+        )
+        assertFalse(
+            renderer,
+            renderer.contains("canvas.drawRect(x(0), cloudTop, x(data.lastIndex), cloudBottom, border)"),
+        )
         assertTrue(renderer, renderer.contains("#00E272"))
         assertTrue(renderer, renderer.contains("yWind"))
         assertTrue(renderer, renderer.contains("paintLegendSample"))
