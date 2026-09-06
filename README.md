@@ -92,7 +92,8 @@ This compiles the local GSettings schema, runs the tests, and creates
 
 1. Tag a tested commit as `vX.Y.Z` and push the tag.
 2. GitHub Actions runs the tests, then creates a GitHub release with the
-   installable ZIP attached.
+   GNOME Shell ZIP and the Windows x64 desktop build attached. The Windows
+   binary is the prebuilt tree in `windows/release/Wetterkurve/`.
 3. Submit a tested tag to extensions.gnome.org manually through the protected
    **Submit Wetterkurve to GNOME Extensions** workflow.
 
