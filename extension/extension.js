@@ -54,9 +54,9 @@ const DAY_STRIP_COLORS = [
 ];
 const DAY_STRIP_BOTTOM = 30;
 const CHART_HEIGHT = 278;
-const CLOUD_STRIP_GAP = 4;
+const PLOT_TOP_GAP = 10;
 const CLOUD_STRIP_HEIGHT = 24;
-const CLOUD_STRIP_EXTRA = CLOUD_STRIP_GAP + CLOUD_STRIP_HEIGHT;
+const CLOUD_STRIP_EXTRA = CLOUD_STRIP_HEIGHT;
 const WIND_COLOR = [0.00, 226 / 255, 114 / 255, 1]; // #00E272
 
 function label(text, styleClass) {
@@ -113,11 +113,11 @@ class ForecastChart extends St.DrawingArea {
             return;
 
         const stripBottom = DAY_STRIP_BOTTOM;
-        const cloudTop = stripBottom + CLOUD_STRIP_GAP;
-        const cloudBottom = this._showClouds ? cloudTop + CLOUD_STRIP_HEIGHT : stripBottom;
+        const cloudTop = stripBottom + PLOT_TOP_GAP;
+        const cloudBottom = cloudTop + CLOUD_STRIP_HEIGHT;
         const plot = {
             left: 36,
-            top: cloudBottom + 10,
+            top: this._showClouds ? cloudBottom : stripBottom + PLOT_TOP_GAP,
             right: width - 28,
             bottom: height - 42,
         };
@@ -174,10 +174,13 @@ class ForecastChart extends St.DrawingArea {
         cr.setLineWidth(1);
         for (let value = minTemp; value <= maxTemp; value += 5) {
             const gridY = y(value);
-            cr.setSourceRGBA(1, 1, 1, 0.19);
-            cr.moveTo(plot.left, gridY);
-            cr.lineTo(plot.right, gridY);
-            cr.stroke();
+            const hideTopGrid = this._showClouds && value === maxTemp;
+            if (!hideTopGrid) {
+                cr.setSourceRGBA(1, 1, 1, 0.19);
+                cr.moveTo(plot.left, gridY);
+                cr.lineTo(plot.right, gridY);
+                cr.stroke();
+            }
             cr.setSourceRGBA(1, 1, 1, 1);
             cr.moveTo(2, gridY + 3);
             cr.showText(`${value}°`);
