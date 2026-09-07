@@ -615,9 +615,9 @@ export default class WetterkurveExtension extends Extension {
 
     _setLayerActive(button, on) {
         if (on)
-            button.add_style_pseudo_class('active');
+            button.add_style_class_name('mw-layer-on');
         else
-            button.remove_style_pseudo_class('active');
+            button.remove_style_class_name('mw-layer-on');
     }
 
     _toggleClouds() {

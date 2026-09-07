@@ -189,6 +189,10 @@
 }
 
 .mw-layer-button:active {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+.mw-layer-button.mw-layer-on {
   background-color: rgba(73, 157, 255, 0.55);
 }
 
