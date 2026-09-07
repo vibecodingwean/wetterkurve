@@ -125,9 +125,9 @@ class WidgetLayoutTest {
         assertTrue(widgets, widgets.contains("updateAppWidgetState"))
         assertTrue(widgets, widgets.contains("getGlanceIdBy"))
         assertFalse(widgets, widgets.contains("runBlocking"))
-        assertTrue(widgets, widgets.contains("OPTION_APPWIDGET_MAX_HEIGHT"))
+        assertTrue(widgets, widgets.contains("LocalSize.current"))
         assertTrue(widgets, widgets.contains("ChartContent(snapshot)"))
-        assertTrue(widgets, widgets.contains("ContentScale.FillBounds"))
+        assertTrue(widgets, widgets.contains("ContentScale.Fit"))
         assertFalse(widgets, widgets.contains("LayerChip"))
     }
 }

@@ -17,6 +17,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.currentState
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
@@ -55,6 +56,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 data class WidgetSnapshot(
@@ -187,27 +189,22 @@ class ChartWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val glanceManager = GlanceAppWidgetManager(context)
         val density = context.resources.displayMetrics.density
-        val sizes = runCatching { glanceManager.getAppWidgetSizes(id) }.getOrDefault(emptyList())
-        val glance = sizes.maxByOrNull { it.width.value * it.height.value }
-        val appWidgetId = runCatching { glanceManager.getAppWidgetId(id) }.getOrNull()
-        val options = appWidgetId?.let { AppWidgetManager.getInstance(context).getAppWidgetOptions(it) }
-        val widthDp = maxOf(
-            glance?.width?.value ?: 0f,
-            options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH)?.toFloat() ?: 0f,
-            400f,
-        )
-        val heightDp = maxOf(
-            glance?.height?.value ?: 0f,
-            options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)?.toFloat() ?: 0f,
-            280f,
-        )
-        val width = (widthDp * density).roundToInt()
-        val height = (heightDp * density).roundToInt()
-        val snapshot = WetterkurveWidgets.snapshot(context, width, height)
+        val sizes = runCatching { GlanceAppWidgetManager(context).getAppWidgetSizes(id) }
+            .getOrDefault(emptyList())
+            .ifEmpty { listOf(DpSize(400.dp, 280.dp)) }
+        val charts = sizes.associateWith { size ->
+            val width = (size.width.value * density).roundToInt().coerceAtLeast(1)
+            val height = (size.height.value * density).roundToInt().coerceAtLeast(1)
+            WetterkurveWidgets.snapshot(context, width, height)
+        }
         provideContent {
             currentState<Preferences>()[TickKey]
+            val size = LocalSize.current
+            val snapshot = charts.minByOrNull { entry ->
+                abs(entry.key.width.value - size.width.value) +
+                    abs(entry.key.height.value - size.height.value)
+            }?.value ?: charts.values.first()
             ChartContent(snapshot)
         }
     }
@@ -278,7 +275,7 @@ private fun ChartContent(snapshot: WidgetSnapshot) {
                 provider = ImageProvider(chart),
                 contentDescription = LocalContext.current.getString(R.string.chart_widget_description),
                 modifier = GlanceModifier.fillMaxSize().clickable(openApp),
-                contentScale = ContentScale.FillBounds,
+                contentScale = ContentScale.Fit,
             )
         }
         Box(
