@@ -5,7 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
@@ -13,7 +12,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -53,8 +51,6 @@ import de.wean.wetterkurve.WeatherService
 import de.wean.wetterkurve.languageTag
 import de.wean.wetterkurve.data.ForecastRepository
 import de.wean.wetterkurve.iconDrawable
-import java.io.File
-import java.io.FileOutputStream
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -73,32 +69,6 @@ data class WidgetSnapshot(
 )
 
 private val TickKey = longPreferencesKey("tick")
-private val CityKey = stringPreferencesKey("city")
-private val TempKey = stringPreferencesKey("temp")
-private val ConditionKey = stringPreferencesKey("condition")
-private val IconKey = stringPreferencesKey("icon")
-private val StatusKey = stringPreferencesKey("status")
-private val ChartPathKey = stringPreferencesKey("chartPath")
-
-private fun snapshotFromPrefs(prefs: Preferences): WidgetSnapshot {
-    val path = prefs[ChartPathKey]
-    val chart = path?.let { BitmapFactory.decodeFile(it) }
-    return WidgetSnapshot(
-        locationName = prefs[CityKey].orEmpty().ifBlank { "–" },
-        temperature = prefs[TempKey] ?: "–°",
-        condition = prefs[ConditionKey].orEmpty(),
-        icon = prefs[IconKey] ?: "unknown",
-        status = prefs[StatusKey].orEmpty(),
-        chart = chart,
-    )
-}
-
-private fun writeChartFile(context: Context, appWidgetId: Int, tick: Long, bitmap: Bitmap?): String? {
-    if (bitmap == null) return null
-    val file = File(context.cacheDir, "glance-chart-$appWidgetId-$tick.png")
-    FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 90, it) }
-    return file.absolutePath
-}
 
 object WetterkurveWidgets {
     suspend fun updateAll(context: Context) {
@@ -112,30 +82,10 @@ object WetterkurveWidgets {
         val glanceManager = GlanceAppWidgetManager(context)
         val tick = System.currentTimeMillis()
         val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, receiver))
-        val density = context.resources.displayMetrics.density
         ids.forEach { appWidgetId ->
             val glanceId = runCatching { glanceManager.getGlanceIdBy(appWidgetId) }.getOrNull() ?: return@forEach
-            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
-            val width = (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) * density)
-                .roundToInt().coerceAtLeast(200)
-            val height = (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) * density)
-                .roundToInt().coerceAtLeast(200)
-            val snapshot = if (widget is ChartWidget) {
-                snapshot(context, width, height)
-            } else {
-                snapshot(context)
-            }
-            val chartPath = writeChartFile(context, appWidgetId, tick, snapshot.chart)
             updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                prefs.toMutablePreferences().apply {
-                    this[TickKey] = tick
-                    this[CityKey] = snapshot.locationName
-                    this[TempKey] = snapshot.temperature
-                    this[ConditionKey] = snapshot.condition
-                    this[IconKey] = snapshot.icon
-                    this[StatusKey] = snapshot.status
-                    if (chartPath != null) this[ChartPathKey] = chartPath
-                }
+                prefs.toMutablePreferences().apply { this[TickKey] = tick }
             }
             widget.update(context, glanceId)
         }
@@ -224,8 +174,10 @@ class CompactWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val snapshot = WetterkurveWidgets.snapshot(context)
         provideContent {
-            CompactContent(snapshotFromPrefs(currentState()))
+            currentState<Preferences>()[TickKey]
+            CompactContent(snapshot)
         }
     }
 }
@@ -235,8 +187,28 @@ class ChartWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val glanceManager = GlanceAppWidgetManager(context)
+        val density = context.resources.displayMetrics.density
+        val sizes = runCatching { glanceManager.getAppWidgetSizes(id) }.getOrDefault(emptyList())
+        val glance = sizes.maxByOrNull { it.width.value * it.height.value }
+        val appWidgetId = runCatching { glanceManager.getAppWidgetId(id) }.getOrNull()
+        val options = appWidgetId?.let { AppWidgetManager.getInstance(context).getAppWidgetOptions(it) }
+        val widthDp = maxOf(
+            glance?.width?.value ?: 0f,
+            options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH)?.toFloat() ?: 0f,
+            400f,
+        )
+        val heightDp = maxOf(
+            glance?.height?.value ?: 0f,
+            options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)?.toFloat() ?: 0f,
+            280f,
+        )
+        val width = (widthDp * density).roundToInt()
+        val height = (heightDp * density).roundToInt()
+        val snapshot = WetterkurveWidgets.snapshot(context, width, height)
         provideContent {
-            ChartContent(snapshotFromPrefs(currentState()))
+            currentState<Preferences>()[TickKey]
+            ChartContent(snapshot)
         }
     }
 }
