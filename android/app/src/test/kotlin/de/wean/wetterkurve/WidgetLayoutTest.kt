@@ -108,4 +108,28 @@ class WidgetLayoutTest {
         assertTrue(screen, screen.contains("model.t(\"clouds\")"))
         assertTrue(screen, screen.contains("model.t(\"wind\")"))
     }
+
+    @Test
+    fun cityChange_refreshesWidgetsAfterForecastReload() {
+        val model = File(appRoot, "kotlin/de/wean/wetterkurve/WetterkurveViewModel.kt").readText()
+        val widgets = File(appRoot, "kotlin/de/wean/wetterkurve/widget/WetterkurveWidgets.kt").readText()
+        val persist = model.substringAfter("private fun persistAndReload()").substringBefore("private fun applyLocationLabels")
+        assertTrue(persist, persist.contains("repo.saveState(state)"))
+        assertTrue(persist, persist.contains("refresh(force = true)"))
+        assertFalse(
+            persist,
+            persist.contains("WetterkurveWidgets.updateAll"),
+        )
+        assertTrue(persist, persist.contains("ForecastWorker.enqueueNow"))
+        assertTrue(model, model.contains("WetterkurveWidgets.updateAll(getApplication())"))
+        assertTrue(widgets, widgets.contains("updateAppWidgetState"))
+        assertTrue(widgets, widgets.contains("getGlanceIdBy"))
+        assertFalse(widgets, widgets.contains("runBlocking"))
+        assertTrue(widgets, widgets.contains("snapshotFromPrefs"))
+        assertTrue(widgets, widgets.contains("CityKey"))
+        assertTrue(widgets, widgets.contains("ChartContent(snapshotFromPrefs"))
+        assertTrue(widgets, widgets.contains("snapshot.locationName"))
+        assertTrue(widgets, widgets.contains("ContentScale.FillBounds"))
+        assertFalse(widgets, widgets.contains("LayerChip"))
+    }
 }

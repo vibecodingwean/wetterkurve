@@ -1,28 +1,38 @@
 package de.wean.wetterkurve.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.glance.LocalSize
+import androidx.glance.currentState
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.updateAll
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -43,6 +53,8 @@ import de.wean.wetterkurve.WeatherService
 import de.wean.wetterkurve.languageTag
 import de.wean.wetterkurve.data.ForecastRepository
 import de.wean.wetterkurve.iconDrawable
+import java.io.File
+import java.io.FileOutputStream
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -60,10 +72,84 @@ data class WidgetSnapshot(
     val showWind: Boolean = true,
 )
 
+private val TickKey = longPreferencesKey("tick")
+private val CityKey = stringPreferencesKey("city")
+private val TempKey = stringPreferencesKey("temp")
+private val ConditionKey = stringPreferencesKey("condition")
+private val IconKey = stringPreferencesKey("icon")
+private val StatusKey = stringPreferencesKey("status")
+private val ChartPathKey = stringPreferencesKey("chartPath")
+
+private fun snapshotFromPrefs(prefs: Preferences): WidgetSnapshot {
+    val path = prefs[ChartPathKey]
+    val chart = path?.let { BitmapFactory.decodeFile(it) }
+    return WidgetSnapshot(
+        locationName = prefs[CityKey].orEmpty().ifBlank { "–" },
+        temperature = prefs[TempKey] ?: "–°",
+        condition = prefs[ConditionKey].orEmpty(),
+        icon = prefs[IconKey] ?: "unknown",
+        status = prefs[StatusKey].orEmpty(),
+        chart = chart,
+    )
+}
+
+private fun writeChartFile(context: Context, appWidgetId: Int, bitmap: Bitmap?): String? {
+    if (bitmap == null) return null
+    val file = File(context.cacheDir, "glance-chart-$appWidgetId.png")
+    FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 90, it) }
+    return file.absolutePath
+}
+
 object WetterkurveWidgets {
     suspend fun updateAll(context: Context) {
-        CompactWidget().updateAll(context)
-        ChartWidget().updateAll(context)
+        bumpAndUpdate(context, CompactWidget(), CompactWidgetReceiver::class.java)
+        bumpAndUpdate(context, ChartWidget(), ChartWidgetReceiver::class.java)
+        pingHosts(context)
+    }
+
+    private suspend fun bumpAndUpdate(context: Context, widget: GlanceAppWidget, receiver: Class<out GlanceAppWidgetReceiver>) {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val glanceManager = GlanceAppWidgetManager(context)
+        val tick = System.currentTimeMillis()
+        val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, receiver))
+        val density = context.resources.displayMetrics.density
+        ids.forEach { appWidgetId ->
+            val glanceId = runCatching { glanceManager.getGlanceIdBy(appWidgetId) }.getOrNull() ?: return@forEach
+            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            val width = (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH) * density)
+                .roundToInt().coerceAtLeast(200)
+            val height = (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT) * density)
+                .roundToInt().coerceAtLeast(200)
+            val snapshot = if (widget is ChartWidget) {
+                snapshot(context, width, height)
+            } else {
+                snapshot(context)
+            }
+            val chartPath = writeChartFile(context, appWidgetId, snapshot.chart)
+            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                prefs.toMutablePreferences().apply {
+                    this[TickKey] = tick
+                    this[CityKey] = snapshot.locationName
+                    this[TempKey] = snapshot.temperature
+                    this[ConditionKey] = snapshot.condition
+                    this[IconKey] = snapshot.icon
+                    this[StatusKey] = snapshot.status
+                    if (chartPath != null) this[ChartPathKey] = chartPath
+                }
+            }
+            widget.update(context, glanceId)
+        }
+    }
+
+    fun pingHosts(context: Context) {
+        val manager = AppWidgetManager.getInstance(context)
+        listOf(CompactWidgetReceiver::class.java, ChartWidgetReceiver::class.java).forEach { cls ->
+            val ids = manager.getAppWidgetIds(ComponentName(context, cls))
+            if (ids.isEmpty()) return@forEach
+            val intent = Intent(context, cls).setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            context.sendBroadcast(intent)
+        }
     }
 
     suspend fun snapshot(
@@ -135,26 +221,22 @@ class RefreshAction : ActionCallback {
 
 class CompactWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
+    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val snapshot = WetterkurveWidgets.snapshot(context)
-        provideContent { CompactContent(snapshot) }
+        provideContent {
+            CompactContent(snapshotFromPrefs(currentState()))
+        }
     }
 }
 
 class ChartWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
+    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            val size = LocalSize.current
-            val density = LocalContext.current.resources.displayMetrics.density
-            val width = (size.width.value * density).roundToInt().coerceAtLeast(200)
-            val height = (size.height.value * density).roundToInt().coerceAtLeast(200)
-            val snapshot = kotlinx.coroutines.runBlocking {
-                WetterkurveWidgets.snapshot(context, width, height)
-            }
-            ChartContent(snapshot)
+            ChartContent(snapshotFromPrefs(currentState()))
         }
     }
 }

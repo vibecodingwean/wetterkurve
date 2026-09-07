@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.wean.wetterkurve.data.ForecastRepository
 import de.wean.wetterkurve.widget.WetterkurveWidgets
+import de.wean.wetterkurve.worker.ForecastWorker
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -135,6 +136,7 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
                 payload = cached.payload
                 render(cached.payload)
                 WetterkurveWidgets.updateAll(getApplication())
+                ForecastWorker.enqueueNow(getApplication())
             } catch (_: Exception) {
                 _ui.update {
                     it.copy(
@@ -153,16 +155,17 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
             repo.saveState(state)
             _ui.update { it.copy(showClouds = state.showClouds, showWind = state.showWind) }
             WetterkurveWidgets.updateAll(getApplication())
+            ForecastWorker.enqueueNow(getApplication())
         }
     }
 
     private fun persistAndReload() {
         viewModelScope.launch {
             repo.saveState(state)
-            WetterkurveWidgets.updateAll(getApplication())
             payload = null
             lastFetchEpoch = 0
             applyLocationLabels()
+            ForecastWorker.enqueueNow(getApplication())
             refresh(force = true)
         }
     }

@@ -3,6 +3,8 @@ package de.wean.wetterkurve.worker
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -27,6 +29,14 @@ class ForecastWorker(
 
     companion object {
         private const val NAME = "wetterkurve-forecast"
+
+        fun enqueueNow(context: Context) {
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                "$NAME-now",
+                ExistingWorkPolicy.REPLACE,
+                OneTimeWorkRequestBuilder<ForecastWorker>().build(),
+            )
+        }
 
         fun schedule(context: Context) {
             val request = PeriodicWorkRequestBuilder<ForecastWorker>(
