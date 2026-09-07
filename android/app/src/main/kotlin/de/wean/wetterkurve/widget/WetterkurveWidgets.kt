@@ -93,9 +93,9 @@ private fun snapshotFromPrefs(prefs: Preferences): WidgetSnapshot {
     )
 }
 
-private fun writeChartFile(context: Context, appWidgetId: Int, bitmap: Bitmap?): String? {
+private fun writeChartFile(context: Context, appWidgetId: Int, tick: Long, bitmap: Bitmap?): String? {
     if (bitmap == null) return null
-    val file = File(context.cacheDir, "glance-chart-$appWidgetId.png")
+    val file = File(context.cacheDir, "glance-chart-$appWidgetId-$tick.png")
     FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.PNG, 90, it) }
     return file.absolutePath
 }
@@ -125,7 +125,7 @@ object WetterkurveWidgets {
             } else {
                 snapshot(context)
             }
-            val chartPath = writeChartFile(context, appWidgetId, snapshot.chart)
+            val chartPath = writeChartFile(context, appWidgetId, tick, snapshot.chart)
             updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
                 prefs.toMutablePreferences().apply {
                     this[TickKey] = tick
