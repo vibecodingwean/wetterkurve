@@ -25,18 +25,6 @@
         </activity>
 
         <receiver
-            android:name=".widget.CompactWidgetReceiver"
-            android:exported="true"
-            android:label="@string/compact_widget_description">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/wetterkurve_compact_info" />
-        </receiver>
-
-        <receiver
             android:name=".widget.ChartWidgetReceiver"
             android:exported="true"
             android:label="@string/chart_widget_description">
@@ -46,6 +34,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/wetterkurve_chart_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.CompactWidgetReceiver"
+            android:exported="true"
+            android:label="@string/compact_widget_description">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/wetterkurve_compact_info" />
         </receiver>
     </application>
 </manifest>

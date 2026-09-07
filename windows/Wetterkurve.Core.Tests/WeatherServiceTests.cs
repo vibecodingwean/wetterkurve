@@ -116,6 +116,7 @@ public class WeatherServiceTests
             SamplePayload(), 72, new DateTime(2026, 7, 31, 14, 30, 0));
         var png = ChartRenderer.RenderPng(forecast, "de-DE", 680, 250);
         Assert.True(png.Length > 100);
+        Assert.Equal(24, ChartRenderer.CloudStripExtra);
         Assert.Equal(0x89, png[0]);
         Assert.Equal((byte)'P', png[1]);
         Assert.Equal((byte)'N', png[2]);

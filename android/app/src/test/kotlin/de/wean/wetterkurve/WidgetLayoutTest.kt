@@ -9,6 +9,14 @@ class WidgetLayoutTest {
     private val appRoot = File("src/main")
 
     @Test
+    fun chartWidget_isListedBeforeCompactWidget() {
+        val manifest = File(appRoot, "AndroidManifest.xml").readText()
+        val chart = manifest.indexOf("ChartWidgetReceiver")
+        val compact = manifest.indexOf("CompactWidgetReceiver")
+        assertTrue("chart widget must be option 1 in the picker", chart >= 0 && compact > chart)
+    }
+
+    @Test
     fun temperatureWidget_isThinAndFullWidthByDefault() {
         val xml = File(appRoot, "res/xml/wetterkurve_compact_info.xml").readText()
         assertTrue(xml, xml.contains("targetCellWidth=\"5\""))

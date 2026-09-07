@@ -4,6 +4,7 @@ namespace Wetterkurve;
 
 public static class ChartRenderer
 {
+    public const int CloudStripExtra = 24;
     static readonly (double Temperature, float R, float G, float B)[] TemperatureColors =
     [
         (-15, 0.36f, 0.55f, 1.00f),
@@ -52,7 +53,7 @@ public static class ChartRenderer
 
         const float stripBottom = 30;
         const float plotTopGap = 10;
-        const float cloudStripHeight = 24;
+        const float cloudStripHeight = CloudStripExtra;
         var cloudTop = stripBottom + plotTopGap;
         var cloudBottom = cloudTop + cloudStripHeight;
         var plot = new SKRect(

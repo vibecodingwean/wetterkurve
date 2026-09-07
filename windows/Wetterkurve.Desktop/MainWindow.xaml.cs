@@ -49,6 +49,7 @@ public partial class MainWindow : Window
         CloudToggle.Content = T("clouds");
         WindToggle.Content = T("wind");
         UpdateLayerButtons();
+        ApplyCloudWindowHeight();
         SearchHint.Text = T("enterTwoLetters");
         StatusLabel.Text = T("loading");
         RefreshButton.ToolTip = T("refreshWeather");
@@ -412,11 +413,14 @@ public partial class MainWindow : Window
         await RefreshAsync(true);
     }
 
+    bool _cloudWindowExtraApplied;
+
     void CloudToggle_Click(object sender, RoutedEventArgs e)
     {
         _state.ShowClouds = !_state.ShowClouds;
         Persist();
         UpdateLayerButtons();
+        ApplyCloudWindowHeight();
         RedrawChart();
     }
 
@@ -441,6 +445,25 @@ public partial class MainWindow : Window
             : new SolidColorBrush(Color.FromArgb(40, 8, 12, 22));
         button.Foreground = Brushes.White;
         button.BorderBrush = new SolidColorBrush(Color.FromArgb(102, 142, 205, 255));
+    }
+
+    void ApplyCloudWindowHeight()
+    {
+        var extra = ChartRenderer.CloudStripExtra;
+        if (_state.ShowClouds && !_cloudWindowExtraApplied)
+        {
+            Height += extra;
+            MinHeight += extra;
+            _cloudWindowExtraApplied = true;
+        }
+        else if (!_state.ShowClouds && _cloudWindowExtraApplied)
+        {
+            MinHeight = Math.Max(480, MinHeight - extra);
+            Height = Math.Max(MinHeight, Height - extra);
+            _cloudWindowExtraApplied = false;
+        }
+        ChartHost.MinHeight = _state.ShowClouds ? 220 + extra : 220;
+        ChartImage.MinHeight = ChartHost.MinHeight;
     }
 
     public void Persist() => SettingsStore.Save(_state);
@@ -526,15 +549,13 @@ public partial class MainWindow : Window
         if (width < 80 || height < 80)
         {
             width = 640;
-            height = 220;
+            height = 220 + (_state.ShowClouds ? ChartRenderer.CloudStripExtra : 0);
         }
-        ChartHost.MinHeight = _state.ShowClouds ? 244 : 220;
-        ChartImage.MinHeight = ChartHost.MinHeight;
         var png = ChartRenderer.RenderPng(
             forecast,
             _locale,
             (int)Math.Round(width),
-            (int)Math.Round(height) + (_state.ShowClouds ? 24 : 0),
+            (int)Math.Round(height),
             _state.ShowClouds,
             _state.ShowWind);
         ChartImage.Source = ToBitmap(png);

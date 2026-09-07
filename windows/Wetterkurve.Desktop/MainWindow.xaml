@@ -4,6 +4,7 @@
         Title="Wetterkurve"
         Width="720" Height="560"
         MinWidth="600" MinHeight="480"
+        Icon="Assets/wetterkurve.ico"
         Background="#202A3A"
         Foreground="White"
         WindowStartupLocation="CenterScreen"
