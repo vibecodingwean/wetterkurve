@@ -8,11 +8,13 @@ import de.wean.wetterkurve.data.ForecastRepository
 import de.wean.wetterkurve.widget.WetterkurveWidgets
 import de.wean.wetterkurve.worker.ForecastWorker
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -152,20 +154,24 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun persistLayers() {
         viewModelScope.launch {
-            repo.saveState(state)
+            withContext(NonCancellable) {
+                repo.saveState(state)
+                WetterkurveWidgets.updateAll(getApplication())
+                ForecastWorker.enqueueNow(getApplication())
+            }
             _ui.update { it.copy(showClouds = state.showClouds, showWind = state.showWind) }
-            WetterkurveWidgets.updateAll(getApplication())
-            ForecastWorker.enqueueNow(getApplication())
         }
     }
 
     private fun persistAndReload() {
         viewModelScope.launch {
-            repo.saveState(state)
-            payload = null
-            lastFetchEpoch = 0
+            withContext(NonCancellable) {
+                repo.saveState(state)
+                payload = null
+                lastFetchEpoch = 0
+                ForecastWorker.enqueueNow(getApplication())
+            }
             applyLocationLabels()
-            ForecastWorker.enqueueNow(getApplication())
             refresh(force = true)
         }
     }

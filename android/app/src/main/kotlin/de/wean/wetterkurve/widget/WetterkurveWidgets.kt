@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -56,7 +57,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import kotlin.math.abs
+import kotlinx.coroutines.runBlocking
 import kotlin.math.roundToInt
 
 data class WidgetSnapshot(
@@ -176,9 +177,11 @@ class CompactWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val snapshot = WetterkurveWidgets.snapshot(context)
         provideContent {
-            currentState<Preferences>()[TickKey]
+            val tick = currentState<Preferences>()[TickKey]
+            val snapshot = remember(tick) {
+                runBlocking { WetterkurveWidgets.snapshot(context) }
+            }
             CompactContent(snapshot)
         }
     }
@@ -190,21 +193,18 @@ class ChartWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val density = context.resources.displayMetrics.density
-        val sizes = runCatching { GlanceAppWidgetManager(context).getAppWidgetSizes(id) }
-            .getOrDefault(emptyList())
-            .ifEmpty { listOf(DpSize(400.dp, 280.dp)) }
-        val charts = sizes.associateWith { size ->
-            val width = (size.width.value * density).roundToInt().coerceAtLeast(1)
-            val height = (size.height.value * density).roundToInt().coerceAtLeast(1)
-            WetterkurveWidgets.snapshot(context, width, height)
-        }
         provideContent {
-            currentState<Preferences>()[TickKey]
+            val tick = currentState<Preferences>()[TickKey]
             val size = LocalSize.current
-            val snapshot = charts.minByOrNull { entry ->
-                abs(entry.key.width.value - size.width.value) +
-                    abs(entry.key.height.value - size.height.value)
-            }?.value ?: charts.values.first()
+            val snapshot = remember(tick, size.width, size.height) {
+                runBlocking {
+                    WetterkurveWidgets.snapshot(
+                        context,
+                        (size.width.value * density).roundToInt().coerceAtLeast(1),
+                        (size.height.value * density).roundToInt().coerceAtLeast(1),
+                    )
+                }
+            }
             ChartContent(snapshot)
         }
     }

@@ -121,10 +121,11 @@ class WidgetLayoutTest {
             persist.contains("WetterkurveWidgets.updateAll"),
         )
         assertTrue(persist, persist.contains("ForecastWorker.enqueueNow"))
-        assertTrue(model, model.contains("WetterkurveWidgets.updateAll(getApplication())"))
+        assertTrue(model, model.contains("NonCancellable"))
         assertTrue(widgets, widgets.contains("updateAppWidgetState"))
         assertTrue(widgets, widgets.contains("getGlanceIdBy"))
-        assertFalse(widgets, widgets.contains("runBlocking"))
+        assertTrue(widgets, widgets.contains("remember(tick"))
+        assertTrue(widgets, widgets.contains("runBlocking"))
         assertTrue(widgets, widgets.contains("LocalSize.current"))
         assertTrue(widgets, widgets.contains("ChartContent(snapshot)"))
         assertTrue(widgets, widgets.contains("ContentScale.Fit"))
