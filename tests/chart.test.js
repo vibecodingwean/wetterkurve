@@ -26,6 +26,12 @@ assert(source.includes('yWind'), 'wind curve must use a dedicated vertical scale
 assert(source.includes('#00E272'), 'wind curve must use the Android wind color');
 assert(source.includes('cr.lineTo(x(data.length - 1), cloudTop)'),
     'cloud strip must keep the top delimiter toward the weekday strip');
+assert(source.includes('CLOUD_STRIP_EXTRA'),
+    'cloud strip extra height must be a named constant');
+assert(source.includes('_applyChartHeight'),
+    'showing clouds must grow the chart widget instead of shrinking the plot');
+assert(source.includes('CHART_HEIGHT + (this._showClouds ? CLOUD_STRIP_EXTRA : 0)'),
+    'chart height must add the cloud strip extra only while clouds are visible');
 assert(!source.includes('cloudBottom, border'),
     'cloud strip must not stroke a bottom line toward the temperature plot');
 assert(source.includes("_toggleClouds()"), 'popup must toggle clouds');

@@ -53,6 +53,10 @@ const DAY_STRIP_COLORS = [
     [0.10, 0.22, 0.39, 0.88],
 ];
 const DAY_STRIP_BOTTOM = 30;
+const CHART_HEIGHT = 278;
+const CLOUD_STRIP_GAP = 4;
+const CLOUD_STRIP_HEIGHT = 24;
+const CLOUD_STRIP_EXTRA = CLOUD_STRIP_GAP + CLOUD_STRIP_HEIGHT;
 const WIND_COLOR = [0.00, 226 / 255, 114 / 255, 1]; // #00E272
 
 function label(text, styleClass) {
@@ -74,6 +78,7 @@ class ForecastChart extends St.DrawingArea {
         this._locale = 'en-US';
         this._showClouds = true;
         this._showWind = true;
+        this._applyChartHeight();
         this.connect('repaint', area => this._repaint(area));
     }
 
@@ -90,7 +95,14 @@ class ForecastChart extends St.DrawingArea {
     setLayers(showClouds, showWind) {
         this._showClouds = showClouds;
         this._showWind = showWind;
+        this._applyChartHeight();
         this.queue_repaint();
+    }
+
+    _applyChartHeight() {
+        const height = CHART_HEIGHT + (this._showClouds ? CLOUD_STRIP_EXTRA : 0);
+        this.set_height(height);
+        this.set_style(`height: ${height}px;`);
     }
 
     _repaint(area) {
@@ -101,8 +113,8 @@ class ForecastChart extends St.DrawingArea {
             return;
 
         const stripBottom = DAY_STRIP_BOTTOM;
-        const cloudTop = stripBottom + 4;
-        const cloudBottom = this._showClouds ? cloudTop + 24 : stripBottom;
+        const cloudTop = stripBottom + CLOUD_STRIP_GAP;
+        const cloudBottom = this._showClouds ? cloudTop + CLOUD_STRIP_HEIGHT : stripBottom;
         const plot = {
             left: 36,
             top: cloudBottom + 10,
