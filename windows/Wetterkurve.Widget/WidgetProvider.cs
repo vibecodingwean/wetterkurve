@@ -283,7 +283,13 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2, IWidgetR
                 session.LastUpdatedUtc = DateTime.UtcNow;
                 session.LastError = null;
                 var forecast = WeatherService.ChartForecast(payload);
-                session.ChartPng = ChartRenderer.RenderPng(forecast, _locale, 560, 168);
+                session.ChartPng = ChartRenderer.RenderPng(
+                    forecast,
+                    _locale,
+                    560,
+                    _state.ShowClouds ? 192 : 168,
+                    _state.ShowClouds,
+                    _state.ShowWind);
                 WidgetLog.Write($"fetched {forecast.Count} points chart={session.ChartPng.Length}");
             }
             catch (Exception exception)

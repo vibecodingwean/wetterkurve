@@ -75,6 +75,7 @@ public class WeatherServiceTests
     {
         var url = WeatherService.BuildForecastUrl(48.137, 11.576);
         Assert.StartsWith("https://api.open-meteo.com/v1/forecast?", url);
+        Assert.Contains("cloud_cover", url);
         Assert.Contains("forecast_days=3", url);
         Assert.Contains("timezone=Europe%2FBerlin", url);
     }

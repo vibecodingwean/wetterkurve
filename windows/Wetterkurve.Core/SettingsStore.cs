@@ -35,12 +35,18 @@ public static class SettingsStore
                 topElement.ValueKind == JsonValueKind.Number
                 ? topElement.GetDouble()
                 : null;
+            var showClouds = !root.TryGetProperty("showClouds", out var cloudsElement) ||
+                cloudsElement.ValueKind != JsonValueKind.False;
+            var showWind = !root.TryGetProperty("showWind", out var windElement) ||
+                windElement.ValueKind != JsonValueKind.False;
             return new AppState
             {
                 Locations = parsed,
                 ActiveLocation = Math.Clamp(active, 0, parsed.Count - 1),
                 IndicatorLeft = indicatorLeft,
                 IndicatorTop = indicatorTop,
+                ShowClouds = showClouds,
+                ShowWind = showWind,
             };
         }
         catch
@@ -59,6 +65,8 @@ public static class SettingsStore
             activeLocation = state.ActiveLocation,
             indicatorLeft = state.IndicatorLeft,
             indicatorTop = state.IndicatorTop,
+            showClouds = state.ShowClouds,
+            showWind = state.ShowWind,
         });
         File.WriteAllText(path, json);
     }

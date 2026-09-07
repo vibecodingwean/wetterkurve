@@ -79,6 +79,12 @@ class WidgetLayoutTest {
         val model = File(appRoot, "kotlin/de/wean/wetterkurve/WetterkurveViewModel.kt").readText()
         assertTrue(renderer, renderer.contains("if (showClouds)"))
         assertTrue(renderer, renderer.contains("if (showWind)"))
+        assertTrue(renderer, renderer.contains("val plotTopGap = 6f"))
+        assertTrue(
+            renderer,
+            renderer.contains("if (showClouds) cloudBottom else stripBottom + plotTopGap"),
+        )
+        assertTrue(renderer, renderer.contains("hideTopGrid"))
         assertTrue(face, face.contains("showClouds"))
         assertTrue(face, face.contains("showWind"))
         assertFalse(face, face.contains("layerReserve"))

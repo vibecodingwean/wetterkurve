@@ -46,6 +46,9 @@ public partial class MainWindow : Window
         HumidityName.Text = T("humidity");
         SectionTitle.Text = T("threeDayForecast");
         LegendLabel.Text = T("chartLegend");
+        CloudToggle.Content = T("clouds");
+        WindToggle.Content = T("wind");
+        UpdateLayerButtons();
         SearchHint.Text = T("enterTwoLetters");
         StatusLabel.Text = T("loading");
         RefreshButton.ToolTip = T("refreshWeather");
@@ -409,6 +412,37 @@ public partial class MainWindow : Window
         await RefreshAsync(true);
     }
 
+    void CloudToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _state.ShowClouds = !_state.ShowClouds;
+        Persist();
+        UpdateLayerButtons();
+        RedrawChart();
+    }
+
+    void WindToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _state.ShowWind = !_state.ShowWind;
+        Persist();
+        UpdateLayerButtons();
+        RedrawChart();
+    }
+
+    void UpdateLayerButtons()
+    {
+        StyleLayerButton(CloudToggle, _state.ShowClouds);
+        StyleLayerButton(WindToggle, _state.ShowWind);
+    }
+
+    static void StyleLayerButton(Button button, bool on)
+    {
+        button.Background = on
+            ? new SolidColorBrush(Color.FromArgb(140, 73, 157, 255))
+            : new SolidColorBrush(Color.FromArgb(40, 8, 12, 22));
+        button.Foreground = Brushes.White;
+        button.BorderBrush = new SolidColorBrush(Color.FromArgb(102, 142, 205, 255));
+    }
+
     public void Persist() => SettingsStore.Save(_state);
 
     void ApplyEmptyValues()
@@ -494,7 +528,15 @@ public partial class MainWindow : Window
             width = 640;
             height = 220;
         }
-        var png = ChartRenderer.RenderPng(forecast, _locale, (int)Math.Round(width), (int)Math.Round(height));
+        ChartHost.MinHeight = _state.ShowClouds ? 244 : 220;
+        ChartImage.MinHeight = ChartHost.MinHeight;
+        var png = ChartRenderer.RenderPng(
+            forecast,
+            _locale,
+            (int)Math.Round(width),
+            (int)Math.Round(height) + (_state.ShowClouds ? 24 : 0),
+            _state.ShowClouds,
+            _state.ShowWind);
         ChartImage.Source = ToBitmap(png);
     }
 

@@ -85,9 +85,16 @@ object ChartRenderer {
 
         val label = (height * 0.10f).coerceIn(28f, 44f)
         val stripBottom = label * 1.5f
-        val cloudTop = stripBottom + 4f
-        val cloudBottom = if (showClouds) cloudTop + (label * 0.72f).coerceIn(18f, 36f) else stripBottom
-        val plot = RectF(label * 1.85f, cloudBottom + 6f, width - label * 1.85f, height - label * 1.85f)
+        val plotTopGap = 6f
+        val cloudHeight = (label * 0.72f).coerceIn(18f, 36f)
+        val cloudTop = stripBottom + plotTopGap
+        val cloudBottom = cloudTop + cloudHeight
+        val plot = RectF(
+            label * 1.85f,
+            if (showClouds) cloudBottom else stripBottom + plotTopGap,
+            width - label * 1.85f,
+            height - label * 1.85f,
+        )
         val plotWidth = plot.width()
         val plotHeight = plot.height()
         val temperatures = data.flatMap { listOf(it.temperature, it.apparent) }
@@ -132,7 +139,10 @@ object ChartRenderer {
         var value = minTemp
         while (value <= maxTemp) {
             val gridY = y(value)
-            canvas.drawLine(plot.left, gridY, plot.right, gridY, gridPaint)
+            val hideTopGrid = showClouds && value == maxTemp
+            if (!hideTopGrid) {
+                canvas.drawLine(plot.left, gridY, plot.right, gridY, gridPaint)
+            }
             canvas.drawText("${value.toInt()}°", 6f, gridY + label * 0.35f, labelPaint)
             value += 5
         }

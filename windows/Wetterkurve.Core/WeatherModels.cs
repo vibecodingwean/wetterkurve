@@ -17,7 +17,8 @@ public sealed record HourlyPoint(
     double PrecipitationProbability,
     double Precipitation,
     int WeatherCode,
-    double Wind);
+    double Wind,
+    double CloudCover = 0);
 
 public sealed record CurrentWeather(
     [property: JsonPropertyName("temperature_2m")] double Temperature,
@@ -33,7 +34,8 @@ public sealed record HourlyWeather(
     [property: JsonPropertyName("precipitation_probability")] List<double> PrecipitationProbability,
     [property: JsonPropertyName("precipitation")] List<double> Precipitation,
     [property: JsonPropertyName("weather_code")] List<int> WeatherCode,
-    [property: JsonPropertyName("wind_speed_10m")] List<double> WindSpeed);
+    [property: JsonPropertyName("wind_speed_10m")] List<double> WindSpeed,
+    [property: JsonPropertyName("cloud_cover")] List<double>? CloudCover = null);
 
 public sealed record ForecastPayload(
     [property: JsonPropertyName("current")] CurrentWeather Current,
@@ -60,4 +62,6 @@ public sealed record AppState
     public int ActiveLocation { get; set; }
     public double? IndicatorLeft { get; set; }
     public double? IndicatorTop { get; set; }
+    public bool ShowClouds { get; set; } = true;
+    public bool ShowWind { get; set; } = true;
 }

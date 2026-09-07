@@ -122,6 +122,11 @@
                    HorizontalAlignment="Right"
                    Margin="0,6,0,0"/>
 
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button x:Name="CloudToggle" Click="CloudToggle_Click" Padding="9,5" Margin="0,0,7,0"/>
+            <Button x:Name="WindToggle" Click="WindToggle_Click" Padding="9,5"/>
+        </StackPanel>
+
         <Border x:Name="ChartHost"
                 Background="#4C080C16"
                 BorderBrush="#1FFFFFFF"
