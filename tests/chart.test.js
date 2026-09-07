@@ -26,10 +26,28 @@ assert(source.includes('yWind'), 'wind curve must use a dedicated vertical scale
 assert(source.includes('#00E272'), 'wind curve must use the Android wind color');
 assert(source.includes('cr.lineTo(x(data.length - 1), cloudTop)'),
     'cloud strip must keep the top delimiter toward the weekday strip');
+assert(source.includes('CLOUD_STRIP_EXTRA'),
+    'cloud strip extra height must be a named constant');
+assert(source.includes('_applyChartHeight'),
+    'showing clouds must grow the chart widget instead of shrinking the plot');
+assert(source.includes('CHART_HEIGHT + (this._showClouds ? CLOUD_STRIP_EXTRA : 0)'),
+    'chart height must add the cloud strip extra only while clouds are visible');
+assert(source.includes('CLOUD_STRIP_EXTRA = CLOUD_STRIP_HEIGHT'),
+    'cloud extra height is only the strip, the weekday gap already exists');
+assert(source.includes('PLOT_TOP_GAP'),
+    'weekday-to-plot gap must be a named constant');
+assert(source.includes('top: this._showClouds ? cloudBottom : stripBottom + PLOT_TOP_GAP'),
+    'clouds sit in the weekday gap and flush against the temperature plot');
+assert(source.includes('hideTopGrid'),
+    'top temperature grid line must be hideable when clouds are shown');
 assert(!source.includes('cloudBottom, border'),
     'cloud strip must not stroke a bottom line toward the temperature plot');
 assert(source.includes("_toggleClouds()"), 'popup must toggle clouds');
 assert(source.includes("_toggleWind()"), 'popup must toggle wind');
+assert(source.includes("add_style_class_name('mw-layer-on')"),
+    'layer badges must use a style class, not the pressed :active pseudo-class');
+assert(source.includes("remove_style_class_name('mw-layer-on')"),
+    'layer badges must clear mw-layer-on when off');
 assert(source.includes("set_boolean('show-clouds'"),
     'cloud visibility must persist in GSettings');
 assert(source.includes("set_boolean('show-wind'"),

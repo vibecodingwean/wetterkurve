@@ -4,6 +4,7 @@ namespace Wetterkurve;
 
 public static class ChartRenderer
 {
+    public const int CloudStripExtra = 24;
     static readonly (double Temperature, float R, float G, float B)[] TemperatureColors =
     [
         (-15, 0.36f, 0.55f, 1.00f),
@@ -25,12 +26,14 @@ public static class ChartRenderer
         IReadOnlyList<HourlyPoint> forecast,
         string locale,
         int width,
-        int height)
+        int height,
+        bool showClouds = true,
+        bool showWind = true)
     {
         using var surface = SKSurface.Create(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
         var canvas = surface.Canvas;
         canvas.Clear(new SKColor(8, 12, 22, 77));
-        Paint(canvas, forecast, locale, width, height);
+        Paint(canvas, forecast, locale, width, height, showClouds, showWind);
         using var image = surface.Snapshot();
         using var data = image.Encode(SKEncodedImageFormat.Png, 90);
         return data.ToArray();
@@ -41,12 +44,23 @@ public static class ChartRenderer
         IReadOnlyList<HourlyPoint> data,
         string locale,
         int width,
-        int height)
+        int height,
+        bool showClouds = true,
+        bool showWind = true)
     {
         if (data.Count < 2 || width < 100 || height < 100)
             return;
 
-        var plot = new SKRect(36, 40, width - 16, height - 42);
+        const float stripBottom = 30;
+        const float plotTopGap = 10;
+        const float cloudStripHeight = CloudStripExtra;
+        var cloudTop = stripBottom + plotTopGap;
+        var cloudBottom = cloudTop + cloudStripHeight;
+        var plot = new SKRect(
+            36,
+            showClouds ? cloudBottom : stripBottom + plotTopGap,
+            width - 16,
+            height - 42);
         var plotWidth = plot.Width;
         var plotHeight = plot.Height;
         var temperatures = data.SelectMany(point => new[] { point.Temperature, point.Apparent }).ToList();
@@ -65,6 +79,8 @@ public static class ChartRenderer
             canvas.DrawRect(plot, plotFill);
 
         DrawDayStrip(canvas, data, plot, locale);
+        if (showClouds)
+            DrawCloudStrip(canvas, data, X, cloudTop, cloudBottom);
 
         for (var i = 0; i < data.Count - 1; i++)
         {
@@ -111,7 +127,9 @@ public static class ChartRenderer
         for (var value = minTemp; value <= maxTemp; value += 5)
         {
             var gridY = Y(value);
-            canvas.DrawLine(plot.Left, gridY, plot.Right, gridY, gridPaint);
+            var hideTopGrid = showClouds && value.Equals(maxTemp);
+            if (!hideTopGrid)
+                canvas.DrawLine(plot.Left, gridY, plot.Right, gridY, gridPaint);
             canvas.DrawText($"{value:0}°", 2, gridY + 3, labelPaint);
         }
 
@@ -174,6 +192,25 @@ public static class ChartRenderer
             canvas.DrawPath(BuildSmoothPath(data.Select(point => point.Temperature).ToList(), X, Y), temperaturePaint);
         }
 
+        if (showWind)
+        {
+            var maxWind = Math.Max(20, Math.Ceiling(data.Max(point => point.Wind) / 5) * 5);
+            float YWind(double value) => plot.Bottom - (float)(value / maxWind * plotHeight);
+            StrokeSmoothLine(canvas, data.Select(point => point.Wind).ToList(), X, YWind,
+                new SKColor(0, 20, 12, 180), 3.5f, dashed: false);
+            StrokeSmoothLine(canvas, data.Select(point => point.Wind).ToList(), X, YWind,
+                new SKColor(0, 226, 114, 255), 2f, dashed: false);
+            using var windLabel = new SKPaint
+            {
+                Color = new SKColor(0, 226, 114, 255),
+                TextSize = 10,
+                IsAntialias = true,
+                Typeface = Typeface(),
+            };
+            for (var tick = 0.0; tick <= maxWind; tick += 5)
+                canvas.DrawText($"{tick:0}", plot.Right + 4, YWind(tick) + 3, windLabel);
+        }
+
         using var hourPaint = new SKPaint
         {
             Color = SKColors.White,
@@ -216,6 +253,38 @@ public static class ChartRenderer
             canvas.DrawLine(nowX, plot.Top, nowX, plot.Bottom, glow);
             canvas.DrawLine(nowX, plot.Top, nowX, plot.Bottom, marker);
         }
+    }
+
+    static void DrawCloudStrip(
+        SKCanvas canvas,
+        IReadOnlyList<HourlyPoint> data,
+        Func<int, float> x,
+        float cloudTop,
+        float cloudBottom)
+    {
+        ReadOnlySpan<int> dayPlot = [26, 32, 44];
+        ReadOnlySpan<int> nightPlot = [29, 50, 92];
+        ReadOnlySpan<int> cloudGray = [200, 200, 200];
+        for (var i = 0; i < data.Count - 1; i++)
+        {
+            var hour = data[i].Time.Hour;
+            var night = hour is >= 21 or < 6;
+            var cover = (float)(Math.Clamp(data[i].CloudCover, 0, 100) / 100.0);
+            var basis = night ? nightPlot : dayPlot;
+            var r = (byte)(basis[0] + (cloudGray[0] - basis[0]) * cover);
+            var g = (byte)(basis[1] + (cloudGray[1] - basis[1]) * cover);
+            var b = (byte)(basis[2] + (cloudGray[2] - basis[2]) * cover);
+            using var fill = new SKPaint { Color = new SKColor(r, g, b), IsAntialias = false };
+            canvas.DrawRect(new SKRect(x(i), cloudTop, x(i + 1) + 1, cloudBottom), fill);
+        }
+        using var border = new SKPaint
+        {
+            Color = new SKColor(220, 220, 220, 80),
+            StrokeWidth = 1,
+            IsStroke = true,
+            IsAntialias = true,
+        };
+        canvas.DrawLine(x(0), cloudTop, x(data.Count - 1), cloudTop, border);
     }
 
     static void DrawDayStrip(SKCanvas canvas, IReadOnlyList<HourlyPoint> data, SKRect plot, string locale)

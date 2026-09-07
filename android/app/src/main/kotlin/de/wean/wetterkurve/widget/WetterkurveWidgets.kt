@@ -1,28 +1,38 @@
 package de.wean.wetterkurve.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
+import androidx.glance.currentState
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.updateAll
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -47,6 +57,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.runBlocking
 import kotlin.math.roundToInt
 
 data class WidgetSnapshot(
@@ -60,10 +71,38 @@ data class WidgetSnapshot(
     val showWind: Boolean = true,
 )
 
+private val TickKey = longPreferencesKey("tick")
+
 object WetterkurveWidgets {
     suspend fun updateAll(context: Context) {
-        CompactWidget().updateAll(context)
-        ChartWidget().updateAll(context)
+        bumpAndUpdate(context, CompactWidget(), CompactWidgetReceiver::class.java)
+        bumpAndUpdate(context, ChartWidget(), ChartWidgetReceiver::class.java)
+        pingHosts(context)
+    }
+
+    private suspend fun bumpAndUpdate(context: Context, widget: GlanceAppWidget, receiver: Class<out GlanceAppWidgetReceiver>) {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val glanceManager = GlanceAppWidgetManager(context)
+        val tick = System.currentTimeMillis()
+        val ids = appWidgetManager.getAppWidgetIds(ComponentName(context, receiver))
+        ids.forEach { appWidgetId ->
+            val glanceId = runCatching { glanceManager.getGlanceIdBy(appWidgetId) }.getOrNull() ?: return@forEach
+            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                prefs.toMutablePreferences().apply { this[TickKey] = tick }
+            }
+            widget.update(context, glanceId)
+        }
+    }
+
+    fun pingHosts(context: Context) {
+        val manager = AppWidgetManager.getInstance(context)
+        listOf(CompactWidgetReceiver::class.java, ChartWidgetReceiver::class.java).forEach { cls ->
+            val ids = manager.getAppWidgetIds(ComponentName(context, cls))
+            if (ids.isEmpty()) return@forEach
+            val intent = Intent(context, cls).setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            context.sendBroadcast(intent)
+        }
     }
 
     suspend fun snapshot(
@@ -135,24 +174,36 @@ class RefreshAction : ActionCallback {
 
 class CompactWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
+    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val snapshot = WetterkurveWidgets.snapshot(context)
-        provideContent { CompactContent(snapshot) }
+        provideContent {
+            val tick = currentState<Preferences>()[TickKey]
+            val snapshot = remember(tick) {
+                runBlocking { WetterkurveWidgets.snapshot(context) }
+            }
+            CompactContent(snapshot)
+        }
     }
 }
 
 class ChartWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
+    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val density = context.resources.displayMetrics.density
         provideContent {
+            val tick = currentState<Preferences>()[TickKey]
             val size = LocalSize.current
-            val density = LocalContext.current.resources.displayMetrics.density
-            val width = (size.width.value * density).roundToInt().coerceAtLeast(200)
-            val height = (size.height.value * density).roundToInt().coerceAtLeast(200)
-            val snapshot = kotlinx.coroutines.runBlocking {
-                WetterkurveWidgets.snapshot(context, width, height)
+            val snapshot = remember(tick, size.width, size.height) {
+                runBlocking {
+                    WetterkurveWidgets.snapshot(
+                        context,
+                        (size.width.value * density).roundToInt().coerceAtLeast(1),
+                        (size.height.value * density).roundToInt().coerceAtLeast(1),
+                    )
+                }
             }
             ChartContent(snapshot)
         }
@@ -224,7 +275,7 @@ private fun ChartContent(snapshot: WidgetSnapshot) {
                 provider = ImageProvider(chart),
                 contentDescription = LocalContext.current.getString(R.string.chart_widget_description),
                 modifier = GlanceModifier.fillMaxSize().clickable(openApp),
-                contentScale = ContentScale.FillBounds,
+                contentScale = ContentScale.Fit,
             )
         }
         Box(

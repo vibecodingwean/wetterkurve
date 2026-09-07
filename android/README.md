@@ -11,10 +11,9 @@ widget is a thin full-width bar with a refresh control.
 Needs JDK 17 or 21 and an Android SDK (`compileSdk` 36).
 
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-export ANDROID_HOME="$HOME/Android/Sdk"
+source scripts/android-env.sh
 cd android
-./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug
+./gradlew :core:test :app:assembleDebug
 ```
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`. Install with

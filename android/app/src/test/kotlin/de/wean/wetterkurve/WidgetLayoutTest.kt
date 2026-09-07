@@ -9,6 +9,14 @@ class WidgetLayoutTest {
     private val appRoot = File("src/main")
 
     @Test
+    fun chartWidget_isListedBeforeCompactWidget() {
+        val manifest = File(appRoot, "AndroidManifest.xml").readText()
+        val chart = manifest.indexOf("ChartWidgetReceiver")
+        val compact = manifest.indexOf("CompactWidgetReceiver")
+        assertTrue("chart widget must be option 1 in the picker", chart >= 0 && compact > chart)
+    }
+
+    @Test
     fun temperatureWidget_isThinAndFullWidthByDefault() {
         val xml = File(appRoot, "res/xml/wetterkurve_compact_info.xml").readText()
         assertTrue(xml, xml.contains("targetCellWidth=\"5\""))
@@ -79,6 +87,12 @@ class WidgetLayoutTest {
         val model = File(appRoot, "kotlin/de/wean/wetterkurve/WetterkurveViewModel.kt").readText()
         assertTrue(renderer, renderer.contains("if (showClouds)"))
         assertTrue(renderer, renderer.contains("if (showWind)"))
+        assertTrue(renderer, renderer.contains("val plotTopGap = 6f"))
+        assertTrue(
+            renderer,
+            renderer.contains("if (showClouds) cloudBottom else stripBottom + plotTopGap"),
+        )
+        assertTrue(renderer, renderer.contains("hideTopGrid"))
         assertTrue(face, face.contains("showClouds"))
         assertTrue(face, face.contains("showWind"))
         assertFalse(face, face.contains("layerReserve"))
@@ -93,5 +107,28 @@ class WidgetLayoutTest {
         assertTrue(screen, screen.contains("model.toggleWind()"))
         assertTrue(screen, screen.contains("model.t(\"clouds\")"))
         assertTrue(screen, screen.contains("model.t(\"wind\")"))
+    }
+
+    @Test
+    fun cityChange_refreshesWidgetsAfterForecastReload() {
+        val model = File(appRoot, "kotlin/de/wean/wetterkurve/WetterkurveViewModel.kt").readText()
+        val widgets = File(appRoot, "kotlin/de/wean/wetterkurve/widget/WetterkurveWidgets.kt").readText()
+        val persist = model.substringAfter("private fun persistAndReload()").substringBefore("private fun applyLocationLabels")
+        assertTrue(persist, persist.contains("repo.saveState(state)"))
+        assertTrue(persist, persist.contains("refresh(force = true)"))
+        assertFalse(
+            persist,
+            persist.contains("WetterkurveWidgets.updateAll"),
+        )
+        assertTrue(persist, persist.contains("ForecastWorker.enqueueNow"))
+        assertTrue(model, model.contains("NonCancellable"))
+        assertTrue(widgets, widgets.contains("updateAppWidgetState"))
+        assertTrue(widgets, widgets.contains("getGlanceIdBy"))
+        assertTrue(widgets, widgets.contains("remember(tick"))
+        assertTrue(widgets, widgets.contains("runBlocking"))
+        assertTrue(widgets, widgets.contains("LocalSize.current"))
+        assertTrue(widgets, widgets.contains("ChartContent(snapshot)"))
+        assertTrue(widgets, widgets.contains("ContentScale.Fit"))
+        assertFalse(widgets, widgets.contains("LayerChip"))
     }
 }

@@ -75,6 +75,7 @@ public class WeatherServiceTests
     {
         var url = WeatherService.BuildForecastUrl(48.137, 11.576);
         Assert.StartsWith("https://api.open-meteo.com/v1/forecast?", url);
+        Assert.Contains("cloud_cover", url);
         Assert.Contains("forecast_days=3", url);
         Assert.Contains("timezone=Europe%2FBerlin", url);
     }
@@ -115,6 +116,7 @@ public class WeatherServiceTests
             SamplePayload(), 72, new DateTime(2026, 7, 31, 14, 30, 0));
         var png = ChartRenderer.RenderPng(forecast, "de-DE", 680, 250);
         Assert.True(png.Length > 100);
+        Assert.Equal(24, ChartRenderer.CloudStripExtra);
         Assert.Equal(0x89, png[0]);
         Assert.Equal((byte)'P', png[1]);
         Assert.Equal((byte)'N', png[2]);

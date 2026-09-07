@@ -53,6 +53,10 @@ const DAY_STRIP_COLORS = [
     [0.10, 0.22, 0.39, 0.88],
 ];
 const DAY_STRIP_BOTTOM = 30;
+const CHART_HEIGHT = 278;
+const PLOT_TOP_GAP = 10;
+const CLOUD_STRIP_HEIGHT = 24;
+const CLOUD_STRIP_EXTRA = CLOUD_STRIP_HEIGHT;
 const WIND_COLOR = [0.00, 226 / 255, 114 / 255, 1]; // #00E272
 
 function label(text, styleClass) {
@@ -74,6 +78,7 @@ class ForecastChart extends St.DrawingArea {
         this._locale = 'en-US';
         this._showClouds = true;
         this._showWind = true;
+        this._applyChartHeight();
         this.connect('repaint', area => this._repaint(area));
     }
 
@@ -90,7 +95,14 @@ class ForecastChart extends St.DrawingArea {
     setLayers(showClouds, showWind) {
         this._showClouds = showClouds;
         this._showWind = showWind;
+        this._applyChartHeight();
         this.queue_repaint();
+    }
+
+    _applyChartHeight() {
+        const height = CHART_HEIGHT + (this._showClouds ? CLOUD_STRIP_EXTRA : 0);
+        this.set_height(height);
+        this.set_style(`height: ${height}px;`);
     }
 
     _repaint(area) {
@@ -101,11 +113,11 @@ class ForecastChart extends St.DrawingArea {
             return;
 
         const stripBottom = DAY_STRIP_BOTTOM;
-        const cloudTop = stripBottom + 4;
-        const cloudBottom = this._showClouds ? cloudTop + 24 : stripBottom;
+        const cloudTop = stripBottom + PLOT_TOP_GAP;
+        const cloudBottom = cloudTop + CLOUD_STRIP_HEIGHT;
         const plot = {
             left: 36,
-            top: cloudBottom + 10,
+            top: this._showClouds ? cloudBottom : stripBottom + PLOT_TOP_GAP,
             right: width - 28,
             bottom: height - 42,
         };
@@ -162,10 +174,13 @@ class ForecastChart extends St.DrawingArea {
         cr.setLineWidth(1);
         for (let value = minTemp; value <= maxTemp; value += 5) {
             const gridY = y(value);
-            cr.setSourceRGBA(1, 1, 1, 0.19);
-            cr.moveTo(plot.left, gridY);
-            cr.lineTo(plot.right, gridY);
-            cr.stroke();
+            const hideTopGrid = this._showClouds && value === maxTemp;
+            if (!hideTopGrid) {
+                cr.setSourceRGBA(1, 1, 1, 0.19);
+                cr.moveTo(plot.left, gridY);
+                cr.lineTo(plot.right, gridY);
+                cr.stroke();
+            }
             cr.setSourceRGBA(1, 1, 1, 1);
             cr.moveTo(2, gridY + 3);
             cr.showText(`${value}°`);
@@ -603,9 +618,9 @@ export default class WetterkurveExtension extends Extension {
 
     _setLayerActive(button, on) {
         if (on)
-            button.add_style_pseudo_class('active');
+            button.add_style_class_name('mw-layer-on');
         else
-            button.remove_style_pseudo_class('active');
+            button.remove_style_class_name('mw-layer-on');
     }
 
     _toggleClouds() {

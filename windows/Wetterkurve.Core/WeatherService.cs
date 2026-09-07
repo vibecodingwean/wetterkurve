@@ -73,7 +73,7 @@ public static class WeatherService
     public static string BuildForecastUrl(double latitude, double longitude, string timezone = "Europe/Berlin")
     {
         const string current = "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m";
-        const string hourly = "temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m";
+        const string hourly = "temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,cloud_cover";
         return "https://api.open-meteo.com/v1/forecast?" +
             $"latitude={latitude.ToString(CultureInfo.InvariantCulture)}" +
             $"&longitude={longitude.ToString(CultureInfo.InvariantCulture)}" +
@@ -174,7 +174,8 @@ public static class WeatherService
                 payload.Hourly.PrecipitationProbability[i],
                 payload.Hourly.Precipitation[i],
                 payload.Hourly.WeatherCode[i],
-                payload.Hourly.WindSpeed[i]));
+                payload.Hourly.WindSpeed[i],
+                payload.Hourly.CloudCover is { Count: > 0 } clouds && i < clouds.Count ? clouds[i] : 0));
         }
         return points;
     }
