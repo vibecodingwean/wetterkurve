@@ -81,6 +81,90 @@ assert(url.includes('forecast_days=3'), 'forecast URL range is wrong');
 assert(url.includes('cloud_cover'), 'forecast URL must request cloud cover');
 assert(url.includes('timezone=Europe%2FBerlin'), 'forecast URL timezone is wrong');
 
+const expectedForecastQuery =
+    'latitude=-33.869&longitude=151.209' +
+    '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m' +
+    '&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,cloud_cover' +
+    '&forecast_days=3&timezone=Australia%2FSydney';
+assert(buildForecastUrl(-33.869, 151.209, 'Australia/Sydney') ===
+    `https://api.open-meteo.com/v1/forecast?${expectedForecastQuery}`,
+'forecast URL fields, ordering or escaping changed');
+
+let validationCases = 0;
+function checkForecast(candidate, expectedError = null) {
+    validationCases++;
+    const before = JSON.stringify(candidate);
+    let result;
+    let error;
+    try {
+        result = validateForecast(candidate);
+    } catch (caught) {
+        error = caught;
+    }
+    if (expectedError) {
+        assert(error instanceof Error && error.message === expectedError,
+            `expected ${expectedError}, received ${error?.message ?? 'success'}`);
+    } else {
+        assert(!error && result === candidate,
+            'validation must return the original accepted payload');
+    }
+    assert(JSON.stringify(candidate) === before, 'validation must not mutate its input');
+}
+
+const copyPayload = () => JSON.parse(JSON.stringify(payload));
+for (const candidate of [undefined, null, {}, {current: {}}, {hourly: {}}])
+    checkForecast(candidate, 'Incomplete weather data');
+
+for (const key of Object.keys(payload.current)) {
+    const missing = copyPayload();
+    delete missing.current[key];
+    checkForecast(missing, 'Incomplete weather data');
+    const undefinedValue = copyPayload();
+    undefinedValue.current[key] = undefined;
+    checkForecast(undefinedValue, 'Incomplete weather data');
+    // The validator checks presence, not numeric validity of current values.
+    for (const value of [null, 0, '21.6']) {
+        const present = copyPayload();
+        present.current[key] = value;
+        checkForecast(present);
+    }
+}
+
+for (const key of Object.keys(payload.hourly)) {
+    const missing = copyPayload();
+    delete missing.hourly[key];
+    checkForecast(missing, 'Incomplete weather data');
+    for (const value of [null, {}, 'invalid']) {
+        const wrongType = copyPayload();
+        wrongType.hourly[key] = value;
+        checkForecast(wrongType, 'Incomplete weather data');
+    }
+    for (const length of [0, 1, hours.length - 1, hours.length + 1]) {
+        const mismatched = copyPayload();
+        mismatched.hourly[key] = Array(length).fill(0);
+        checkForecast(mismatched, 'Inconsistent weather data');
+    }
+}
+
+for (const length of [0, 1, 2, 72]) {
+    const candidate = copyPayload();
+    for (const key of Object.keys(candidate.hourly))
+        candidate.hourly[key] = candidate.hourly[key].slice(0, length);
+    checkForecast(candidate, length < 2 ? 'Inconsistent weather data' : null);
+}
+
+const mixedFailures = copyPayload();
+mixedFailures.hourly.time = [];
+delete mixedFailures.hourly.cloud_cover;
+checkForecast(mixedFailures, 'Incomplete weather data');
+const extended = copyPayload();
+extended.current.extra = 'ignored';
+extended.hourly.extra = [1];
+checkForecast(extended);
+checkForecast(copyPayload());
+
+console.log(`forecast validation: ${validationCases} cases passed`);
+
 const geocodingUrl = buildGeocodingUrl('São Paulo');
 assert(geocodingUrl.startsWith('https://geocoding-api.open-meteo.com/v1/search?'),
     'geocoding URL endpoint is wrong');

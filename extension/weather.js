@@ -39,28 +39,29 @@ export function round(value) {
     return Math.round(Number(value));
 }
 
+const CURRENT_FIELDS = [
+    'temperature_2m',
+    'apparent_temperature',
+    'weather_code',
+    'wind_speed_10m',
+    'relative_humidity_2m',
+];
+const HOURLY_FIELDS = [
+    'temperature_2m',
+    'apparent_temperature',
+    'precipitation_probability',
+    'precipitation',
+    'weather_code',
+    'wind_speed_10m',
+    'cloud_cover',
+];
+
 export function buildForecastUrl(latitude, longitude, timezone = 'Europe/Berlin') {
-    const current = [
-        'temperature_2m',
-        'apparent_temperature',
-        'weather_code',
-        'wind_speed_10m',
-        'relative_humidity_2m',
-    ].join(',');
-    const hourly = [
-        'temperature_2m',
-        'apparent_temperature',
-        'precipitation_probability',
-        'precipitation',
-        'weather_code',
-        'wind_speed_10m',
-        'cloud_cover',
-    ].join(',');
     const params = [
         `latitude=${latitude}`,
         `longitude=${longitude}`,
-        `current=${current}`,
-        `hourly=${hourly}`,
+        `current=${CURRENT_FIELDS.join(',')}`,
+        `hourly=${HOURLY_FIELDS.join(',')}`,
         'forecast_days=3',
         `timezone=${encodeURIComponent(timezone)}`,
     ];
@@ -176,24 +177,8 @@ export function validateForecast(payload) {
     if (!payload?.current || !payload?.hourly)
         throw new Error('Incomplete weather data');
 
-    const requiredCurrent = [
-        'temperature_2m',
-        'apparent_temperature',
-        'weather_code',
-        'wind_speed_10m',
-        'relative_humidity_2m',
-    ];
-    const requiredHourly = [
-        'time',
-        'temperature_2m',
-        'apparent_temperature',
-        'precipitation_probability',
-        'precipitation',
-        'weather_code',
-        'wind_speed_10m',
-        'cloud_cover',
-    ];
-    if (requiredCurrent.some(key => payload.current[key] === undefined) ||
+    const requiredHourly = ['time', ...HOURLY_FIELDS];
+    if (CURRENT_FIELDS.some(key => payload.current[key] === undefined) ||
         requiredHourly.some(key => !Array.isArray(payload.hourly[key])))
         throw new Error('Incomplete weather data');
 
