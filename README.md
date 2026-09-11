@@ -70,7 +70,6 @@ Install `android/app/build/outputs/apk/debug/app-debug.apk`, then add a
 **Wetterkurve** widget from the launcher widget picker. Details are in
 [`android/README.md`](android/README.md).
 
-
 ### Development install
 
 ```bash
