@@ -108,7 +108,8 @@ This compiles the local GSettings schema, runs the tests, and creates
    GNOME ZIP and Windows x64 desktop ZIP from the current source. Build
    Android separately with JDK 21 and an Android SDK.
 2. Tag the tested commit as `vX.Y.Z`. After reviewing the packages, create
-   a GitHub release and attach the GNOME ZIP, Windows ZIP and Android APK.
+   a GitHub release and attach the GNOME ZIP and Windows ZIP. Android APKs
+   are not distributed through GitHub.
    The tag workflow verifies the source; it does not publish packages.
 3. Submit a tested tag to extensions.gnome.org manually through the protected
    **Submit Wetterkurve to GNOME Extensions** workflow.

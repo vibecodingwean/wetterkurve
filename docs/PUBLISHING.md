@@ -14,7 +14,8 @@
    Windows with the .NET 10 SDK from the same commit using
    `./scripts/release.sh`; generated binaries stay outside Git. After
    reviewing all packages, create the release and attach the GNOME ZIP,
-   `Wetterkurve-Windows-x64.zip` and the matching Android APK.
+   `Wetterkurve-Windows-x64.zip`. Android APKs are not distributed through
+   GitHub.
 6. To update extensions.gnome.org, start **Submit Wetterkurve to GNOME
    Extensions** from the Actions tab, enter that tested tag, and approve the
    protected `gnome-extension-store` environment only after reviewing its test
