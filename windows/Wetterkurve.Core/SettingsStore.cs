@@ -47,6 +47,8 @@ public static class SettingsStore
                 IndicatorTop = indicatorTop,
                 ShowClouds = showClouds,
                 ShowWind = showWind,
+                Language = Language.ForLocale(root.TryGetProperty("language", out var language) &&
+                    language.ValueKind == JsonValueKind.String ? language.GetString() : null),
             };
         }
         catch
@@ -67,6 +69,7 @@ public static class SettingsStore
             indicatorTop = state.IndicatorTop,
             showClouds = state.ShowClouds,
             showWind = state.ShowWind,
+            language = Language.ForLocale(state.Language),
         });
         File.WriteAllText(path, json);
     }

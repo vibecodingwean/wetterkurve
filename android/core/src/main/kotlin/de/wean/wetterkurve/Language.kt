@@ -1,7 +1,5 @@
 package de.wean.wetterkurve
 
-import java.util.Locale
-
 object Language {
     private val strings = mapOf(
         "de" to mapOf(
@@ -77,7 +75,7 @@ object Language {
     )
 
     fun forLocale(locale: String? = null): String {
-        val tag = locale ?: Locale.getDefault().toLanguageTag()
+        val tag = locale ?: "en"
         return if (Regex("^de(?:[-_]|$)", RegexOption.IGNORE_CASE).containsMatchIn(tag)) "de" else "en"
     }
 

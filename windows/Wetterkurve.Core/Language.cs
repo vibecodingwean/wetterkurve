@@ -6,6 +6,8 @@ public static class Language
     {
         ["de"] = new()
         {
+            ["alwaysOnTop"] = "Immer im Vordergrund",
+            ["quit"] = "Beenden",
             ["searchLocation"] = "Ort suchen …",
             ["enterTwoLetters"] = "Mindestens zwei Buchstaben eingeben",
             ["loadingWeather"] = "Wetter wird geladen …",
@@ -42,6 +44,8 @@ public static class Language
         },
         ["en"] = new()
         {
+            ["alwaysOnTop"] = "Always on top",
+            ["quit"] = "Quit",
             ["searchLocation"] = "Search for a location …",
             ["enterTwoLetters"] = "Enter at least two letters",
             ["loadingWeather"] = "Loading weather …",
@@ -80,7 +84,7 @@ public static class Language
 
     public static string ForLocale(string? locale = null)
     {
-        locale ??= System.Globalization.CultureInfo.CurrentUICulture.Name;
+        locale ??= "en";
         return System.Text.RegularExpressions.Regex.IsMatch(locale, @"^de(?:[-_]|$)",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase) ? "de" : "en";
     }

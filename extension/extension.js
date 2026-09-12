@@ -374,7 +374,8 @@ class ForecastChart extends St.DrawingArea {
 
 export default class WetterkurveExtension extends Extension {
     enable() {
-        this._language = languageForLocale();
+        this._settings = this.getSettings();
+        this._language = languageForLocale(this._settings.get_string('language'));
         this._locale = this._language === 'de' ? 'de-DE' : 'en-US';
         this._payload = null;
         this._lastUpdated = 0;
@@ -386,7 +387,6 @@ export default class WetterkurveExtension extends Extension {
         this._searchRequestId = 0;
         this._forecastCancellable = null;
         this._searchCancellable = null;
-        this._settings = this.getSettings();
         this._locations = parseLocations(
             this._settings.get_string('locations'), [DEFAULT_LOCATION]);
         this._activeLocationIndex = Math.min(
@@ -594,11 +594,40 @@ export default class WetterkurveExtension extends Extension {
         this._rebuildLocationTabs();
 
         this._indicator.menu.addMenuItem(item);
+        const languageMenu = new PopupMenu.PopupSubMenuMenuItem('English / Deutsch');
+        for (const [code, name] of [['en', 'English'], ['de', 'Deutsch']]) {
+            const choice = new PopupMenu.PopupMenuItem(name);
+            choice.setOrnament(code === this._language
+                ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NONE);
+            choice.connect('activate', () => this._selectLanguage(code));
+            languageMenu.menu.addMenuItem(choice);
+        }
+        this._indicator.menu.addMenuItem(languageMenu);
         this._indicator.menu.connect('open-state-changed', (_menu, isOpen) => {
             if (isOpen && GLib.get_monotonic_time() / 1e6 - this._lastUpdated >
                 STALE_SECONDS)
                 this._refresh();
         });
+    }
+
+    _selectLanguage(code) {
+        if (code === this._language)
+            return;
+        this._settings.set_string('language', code);
+        this._language = code;
+        this._locale = code === 'de' ? 'de-DE' : 'en-US';
+        this._searchRequestId++;
+        this._searchCancellable?.cancel();
+        if (this._searchTimeoutId) {
+            GLib.source_remove(this._searchTimeoutId);
+            this._searchTimeoutId = null;
+        }
+        this._indicator.destroy();
+        this._buildUi();
+        Main.panel.addToStatusArea(this.uuid, this._indicator);
+        if (this._payload)
+            this._render(this._payload);
+        this._indicator.menu.open();
     }
 
     _layerButton(key, onClicked) {

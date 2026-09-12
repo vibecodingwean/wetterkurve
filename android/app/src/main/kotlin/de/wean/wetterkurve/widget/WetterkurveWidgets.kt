@@ -50,7 +50,6 @@ import de.wean.wetterkurve.Language
 import de.wean.wetterkurve.MainActivity
 import de.wean.wetterkurve.R
 import de.wean.wetterkurve.WeatherService
-import de.wean.wetterkurve.languageTag
 import de.wean.wetterkurve.data.ForecastRepository
 import de.wean.wetterkurve.iconDrawable
 import java.time.Instant
@@ -110,10 +109,10 @@ object WetterkurveWidgets {
         faceWidth: Int? = null,
         faceHeight: Int? = null,
     ): WidgetSnapshot {
-        val language = Language.forLocale(languageTag(context))
-        val locale = Language.localeTag(language)
         val repo = ForecastRepository(context)
         val state = repo.loadState()
+        val language = state.language
+        val locale = Language.localeTag(language)
         val location = state.locations[state.activeLocation.coerceIn(0, state.locations.lastIndex)]
         val cached = try {
             repo.cachedForecast(location.id) ?: repo.refresh(location, force = true)

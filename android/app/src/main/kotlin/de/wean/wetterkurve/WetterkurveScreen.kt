@@ -61,6 +61,14 @@ fun WetterkurveScreen(state: UiState, model: WetterkurveViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Wetterkurve", color = White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            BigButton("English", Modifier.weight(1f), outlined = state.language != "en") {
+                model.selectLanguage("en")
+            }
+            BigButton("Deutsch", Modifier.weight(1f), outlined = state.language != "de") {
+                model.selectLanguage("de")
+            }
+        }
         Text(model.t("savedLocations"), color = Muted, fontSize = 16.sp)
         state.locations.forEachIndexed { index, location ->
             val active = index == state.activeLocation

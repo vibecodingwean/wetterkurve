@@ -42,6 +42,7 @@ data class AppState(
     val activeLocation: Int,
     val showClouds: Boolean = true,
     val showWind: Boolean = true,
+    val language: String = "en",
 )
 
 @Serializable
@@ -102,4 +103,5 @@ data class AppStateJson(
     val activeLocation: Int = 0,
     val showClouds: Boolean = true,
     val showWind: Boolean = true,
+    val language: String = "en",
 )

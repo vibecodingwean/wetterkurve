@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.wetterkurve" path="/org/gnome/shell/extensions/wetterkurve/">
+    <key name="language" type="s">
+      <default>'en'</default>
+      <choices><choice value="en"/><choice value="de"/></choices>
+      <summary>Interface language</summary>
+    </key>
     <key name="locations" type="s">
       <default>'[{"id":"48.137,11.576","name":"Munich","label":"Munich, Bavaria, Germany","latitude":48.137,"longitude":11.576,"timezone":"Europe/Berlin"}]'</default>
       <summary>Saved weather locations</summary>

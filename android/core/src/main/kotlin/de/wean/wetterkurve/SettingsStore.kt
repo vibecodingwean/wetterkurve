@@ -30,6 +30,7 @@ object SettingsStore {
                 activeLocation = parsed.activeLocation.coerceIn(0, locations.lastIndex),
                 showClouds = parsed.showClouds,
                 showWind = parsed.showWind,
+                language = Language.forLocale(parsed.language),
             )
         } catch (_: Exception) {
             defaultState()
@@ -52,6 +53,7 @@ object SettingsStore {
                 activeLocation = active,
                 showClouds = state.showClouds,
                 showWind = state.showWind,
+                language = Language.forLocale(state.language),
             ),
         )
     }

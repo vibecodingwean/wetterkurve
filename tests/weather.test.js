@@ -194,6 +194,13 @@ assert(parsedLocations.length === 1 && parsedLocations[0].name === 'Berlin',
     'saved locations were not parsed');
 assert(parseLocations('invalid JSON', fallback) === fallback,
     'invalid saved locations did not use fallback');
+const originalDateTimeFormat = Intl.DateTimeFormat;
+try {
+    Intl.DateTimeFormat = () => ({resolvedOptions: () => ({locale: 'de-DE'})});
+    assert(languageForLocale() === 'en', 'default language must be English regardless of system locale');
+} finally {
+    Intl.DateTimeFormat = originalDateTimeFormat;
+}
 assert(languageForLocale('de_DE') === 'de', 'German locale was not detected');
 assert(languageForLocale('en_GB') === 'en', 'English locale was not detected');
 assert(languageForLocale('fr_FR') === 'en', 'non-German locale must use English');

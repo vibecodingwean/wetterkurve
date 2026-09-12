@@ -21,7 +21,7 @@
                     MinWidth="32"
                     Padding="7,1,7,4"
                     Click="RemoveLocation_Click"
-                    ToolTip="Ort entfernen"/>
+                    ToolTip="Remove location"/>
             <WrapPanel x:Name="LocationTabs" VerticalAlignment="Center"/>
         </DockPanel>
 

@@ -9,7 +9,7 @@ TARGET_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/$UUID"
 mkdir -p -- "$(dirname -- "$TARGET_DIR")"
 
 if [[ -e "$TARGET_DIR" && ! -L "$TARGET_DIR" ]]; then
-  printf 'Abbruch: %s existiert bereits und ist kein Symlink.\n' "$TARGET_DIR" >&2
+  printf 'Cannot install: %s already exists and is not a symlink.\n' "$TARGET_DIR" >&2
   exit 1
 fi
 

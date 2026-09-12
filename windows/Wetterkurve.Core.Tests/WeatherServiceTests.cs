@@ -89,6 +89,30 @@ public class WeatherServiceTests
     }
 
     [Fact]
+    public void Language_defaults_to_English_and_persists_German_choice()
+    {
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = new("de-DE");
+            Assert.Equal("en", Language.ForLocale());
+            Assert.Equal("en", SettingsStore.Load(path).Language);
+            var state = SettingsStore.DefaultState();
+            state.Language = "de";
+            SettingsStore.Save(state, path);
+            Assert.Equal("de", SettingsStore.Load(path).Language);
+            File.WriteAllText(path, "{\"language\":\"fr\"}");
+            Assert.Equal("en", SettingsStore.Load(path).Language);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previous;
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void Language_detects_german_locales()
     {
         Assert.Equal("de", Language.ForLocale("de-DE"));

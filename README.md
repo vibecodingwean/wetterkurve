@@ -1,10 +1,12 @@
 # Wetterkurve
 
-Wetterkurve is a native GNOME Shell extension that keeps a compact weather
-overview for up to three saved locations in the top panel. Its popup shows a
-three-day chart from today at midnight to 23:00 two days later, including
-temperature, feels-like temperature, precipitation probability, precipitation,
-and an alternating weekday strip.
+Wetterkurve brings a compact three-day weather forecast to GNOME Shell,
+Windows 11, and Android. Save up to three locations and see temperature,
+feels-like temperature, rain probability, and rainfall at a glance.
+
+On GNOME, current conditions appear in the top panel and the chart opens in
+a popup. Windows provides a temperature tray icon and chart window. Android
+provides a slim temperature widget and a three-day chart widget.
 
 Forecasts and location search come directly from the [Open-Meteo API](https://open-meteo.com/).
 No API key is required.
@@ -18,7 +20,8 @@ No API key is required.
 - Live location search
 - Temperature and feels-like curves plus precipitation information
 - Automatic refresh every 20 minutes and a manual refresh button
-- German on German-language systems; English on all other systems
+- English by default, with optional German selected in the app
+- Optional cloud-cover and wind layers on GNOME and Android
 
 ## Install
 
@@ -59,16 +62,27 @@ The same Open-Meteo forecast runs on Android as homescreen widgets. The app
 stores up to three locations. A thin full-width widget shows the current
 temperature; a second widget shows the three-day chart.
 
-On a machine with JDK 17 or 21 and an Android SDK:
+On a machine with JDK 21 and an Android SDK (API 36):
 
 ```bash
 cd android
-./gradlew :core:test :app:assembleDebug
+./gradlew :core:test :app:testDebugUnitTest :app:assembleDebug
 ```
 
 Install `android/app/build/outputs/apk/debug/app-debug.apk`, then add a
 **Wetterkurve** widget from the launcher widget picker. Details are in
 [`android/README.md`](android/README.md).
+
+## Language
+
+Wetterkurve starts in English, regardless of your system language. Your choice
+is saved and applies to weather labels, location search, and chart weekdays.
+
+- **GNOME:** open the popup and choose **English / Deutsch**.
+- **Android:** choose **English** or **Deutsch** at the top of the app;
+  the widgets use the same language.
+- **Windows:** right-click the temperature tray icon and choose
+  **English / Deutsch**.
 
 ### Development install
 

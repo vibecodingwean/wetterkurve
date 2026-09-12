@@ -59,7 +59,7 @@ const STRINGS = {
     },
 };
 
-export function languageForLocale(locale = Intl.DateTimeFormat().resolvedOptions().locale) {
+export function languageForLocale(locale = 'en') {
     return /^de(?:[-_]|$)/i.test(locale || '') ? 'de' : 'en';
 }
 

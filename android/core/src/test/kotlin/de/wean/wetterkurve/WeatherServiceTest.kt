@@ -129,6 +129,21 @@ class WeatherServiceTest {
     }
 
     @Test
+    fun language_defaultsToEnglishAndPersistsGermanChoice() {
+        val previous = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.GERMANY)
+            assertEquals("en", Language.forLocale())
+            assertEquals("en", SettingsStore.parse("{}").language)
+            val german = SettingsStore.defaultState().copy(language = "de")
+            assertEquals(german, SettingsStore.parse(SettingsStore.serialize(german)))
+            assertEquals("en", SettingsStore.parse("{\"language\":\"fr\"}").language)
+        } finally {
+            java.util.Locale.setDefault(previous)
+        }
+    }
+
+    @Test
     fun language_detectsGermanLocales() {
         assertEquals("de", Language.forLocale("de-DE"))
         assertEquals("de", Language.forLocale("de"))

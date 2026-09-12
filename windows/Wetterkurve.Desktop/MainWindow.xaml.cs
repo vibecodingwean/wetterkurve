@@ -14,8 +14,8 @@ namespace Wetterkurve.Desktop;
 
 public partial class MainWindow : Window
 {
-    readonly string _language = Wetterkurve.Language.ForLocale();
-    readonly string _locale;
+    string _language = "en";
+    string _locale = "en-US";
     readonly HttpClient _http = WeatherService.CreateClient();
     readonly DispatcherTimer _refreshTimer = new();
     readonly DispatcherTimer _markerTimer = new();
@@ -36,25 +36,11 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        _language = _state.Language;
         _locale = Wetterkurve.Language.LocaleTag(_language);
         InitializeComponent();
-        TitleLabel.Text = ActiveLocation.Name;
-        ConditionLabel.Text = T("loadingWeather");
-        FeelsName.Text = T("feelsLike");
-        RainName.Text = T("rain");
-        WindName.Text = T("wind");
-        HumidityName.Text = T("humidity");
-        SectionTitle.Text = T("threeDayForecast");
-        LegendLabel.Text = T("chartLegend");
-        CloudToggle.Content = T("clouds");
-        WindToggle.Content = T("wind");
-        UpdateLayerButtons();
-        ApplyCloudWindowHeight();
-        SearchHint.Text = T("enterTwoLetters");
-        StatusLabel.Text = T("loading");
-        RefreshButton.ToolTip = T("refreshWeather");
+        ApplyLanguage();
         ApplyEmptyValues();
-        RebuildLocationTabs();
         ConfigureTray();
         ConfigureIndicator();
         ConfigureTimers();
@@ -70,6 +56,26 @@ public partial class MainWindow : Window
                 _ = RefreshAsync(true);
             }
         };
+    }
+
+    void ApplyLanguage()
+    {
+        TitleLabel.Text = ActiveLocation.Name;
+        ConditionLabel.Text = T("loadingWeather");
+        FeelsName.Text = T("feelsLike");
+        RainName.Text = T("rain");
+        WindName.Text = T("wind");
+        HumidityName.Text = T("humidity");
+        SectionTitle.Text = T("threeDayForecast");
+        LegendLabel.Text = T("chartLegend");
+        CloudToggle.Content = T("clouds");
+        WindToggle.Content = T("wind");
+        UpdateLayerButtons();
+        ApplyCloudWindowHeight();
+        SearchHint.Text = T("enterTwoLetters");
+        StatusLabel.Text = T("loading");
+        RefreshButton.ToolTip = T("refreshWeather");
+        RebuildLocationTabs();
     }
 
     public AppState State => _state;
@@ -106,23 +112,7 @@ public partial class MainWindow : Window
             if (e.Button == Forms.MouseButtons.Left)
                 ToggleFromTray();
         };
-        var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add(T("refreshWeather"), null, async (_, _) => await RefreshAsync(true));
-        var topmost = new Forms.ToolStripMenuItem("Immer im Vordergrund")
-        {
-            Checked = Topmost,
-            CheckOnClick = true,
-        };
-        topmost.CheckedChanged += (_, _) => Topmost = topmost.Checked;
-        menu.Items.Add(topmost);
-        menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Beenden", null, (_, _) =>
-        {
-            _allowClose = true;
-            _tray.Visible = false;
-            System.Windows.Application.Current.Shutdown();
-        });
-        _tray.ContextMenuStrip = menu;
+        UpdateTrayMenu();
         Closed += (_, _) =>
         {
             _promoteTimer.Stop();
@@ -140,6 +130,53 @@ public partial class MainWindow : Window
                 _promoteTimer.Stop();
         };
         _promoteTimer.Start();
+    }
+
+    void UpdateTrayMenu()
+    {
+        var menu = new Forms.ContextMenuStrip();
+        menu.Items.Add(T("refreshWeather"), null, async (_, _) => await RefreshAsync(true));
+        var topmost = new Forms.ToolStripMenuItem(T("alwaysOnTop"))
+        {
+            Checked = Topmost,
+            CheckOnClick = true,
+        };
+        topmost.CheckedChanged += (_, _) => Topmost = topmost.Checked;
+        menu.Items.Add(topmost);
+        menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add(T("quit"), null, (_, _) =>
+        {
+            _allowClose = true;
+            _tray.Visible = false;
+            System.Windows.Application.Current.Shutdown();
+        });
+        var languages = new Forms.ToolStripMenuItem("English / Deutsch");
+        foreach (var (code, name) in new[] { ("en", "English"), ("de", "Deutsch") })
+        {
+            var item = new Forms.ToolStripMenuItem(name) { Checked = code == _language };
+            item.Click += (_, _) => SelectLanguage(code);
+            languages.DropDownItems.Add(item);
+        }
+        menu.Items.Insert(0, languages);
+        var previous = _tray.ContextMenuStrip;
+        _tray.ContextMenuStrip = menu;
+        previous?.Dispose();
+    }
+
+    void SelectLanguage(string language)
+    {
+        if (_language == language) return;
+        _state.Language = _language = language;
+        _locale = Wetterkurve.Language.LocaleTag(language);
+        SettingsStore.Save(_state);
+        _searchTimer.Stop();
+        _searchCts?.Cancel();
+        _searchRequest++;
+        SearchBox.Visibility = Visibility.Collapsed;
+        SearchResults.Children.Clear();
+        ApplyLanguage();
+        UpdateTrayMenu();
+        if (_payload is not null) Render(_payload);
     }
 
     void ConfigureIndicator()

@@ -1,7 +1,6 @@
 package de.wean.wetterkurve
 
 import android.app.Application
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.wean.wetterkurve.data.ForecastRepository
@@ -18,7 +17,6 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 data class UiState(
     val language: String = Language.forLocale(),
@@ -40,7 +38,7 @@ data class UiState(
 
 class WetterkurveViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = ForecastRepository(application)
-    private val language = Language.forLocale(languageTag(application))
+    private val language get() = state.language
     private var searchJob: Job? = null
     private var forecastJob: Job? = null
     private var lastFetchEpoch = 0L
@@ -63,6 +61,21 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun t(key: String, values: Map<String, String> = emptyMap()) = Language.text(language, key, values)
+
+    fun selectLanguage(code: String) {
+        val selected = Language.forLocale(code)
+        if (selected == language) return
+        state = state.copy(language = selected)
+        hideSearch()
+        applyLocationLabels()
+        payload?.let { render(it) }
+        viewModelScope.launch {
+            withContext(NonCancellable) {
+                repo.saveState(state)
+                WetterkurveWidgets.updateAll(getApplication())
+            }
+        }
+    }
 
     fun selectLocation(index: Int) {
         if (index == state.activeLocation) return
@@ -180,6 +193,9 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
         val location = active()
         _ui.update {
             it.copy(
+                language = language,
+                locale = Language.localeTag(language),
+                searchHint = t("enterTwoLetters"),
                 locations = state.locations,
                 activeLocation = state.activeLocation,
                 title = location.name,
@@ -234,11 +250,6 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
         val index = state.activeLocation.coerceIn(0, state.locations.lastIndex)
         return state.locations[index]
     }
-}
-
-internal fun languageTag(context: Context): String {
-    val locales = context.resources.configuration.locales
-    return if (locales.size() > 0) locales[0].toLanguageTag() else Locale.getDefault().toLanguageTag()
 }
 
 fun iconDrawable(name: String): Int = when (name) {
