@@ -35,3 +35,6 @@ secrets*
 .idea/
 .vscode/
 *.swp
+
+# Generated Windows distribution
+/windows/release/

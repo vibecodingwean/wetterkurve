@@ -6,6 +6,11 @@ PROJECT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 windows_exe="$PROJECT_DIR/windows/release/Wetterkurve/Wetterkurve.exe"
 windows_zip="$PROJECT_DIR/dist/Wetterkurve-Windows-x64.zip"
+dotnet test "$PROJECT_DIR/windows/Wetterkurve.Core.Tests" -c Release --nologo
+rm -rf -- "$PROJECT_DIR/windows/release/Wetterkurve"
+dotnet publish "$PROJECT_DIR/windows/Wetterkurve.Desktop" \
+  -c Release -r win-x64 --self-contained false -p:EnableWindowsTargeting=true \
+  -o "$PROJECT_DIR/windows/release/Wetterkurve" --nologo
 test -f "$windows_exe"
 mkdir -p "$PROJECT_DIR/dist"
 rm -f "$windows_zip"

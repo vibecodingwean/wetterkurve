@@ -54,7 +54,8 @@ On a Windows 11 machine with the .NET 10 SDK:
 This publishes `Wetterkurve.exe` to `%LOCALAPPDATA%\Wetterkurve\app`. Closing
 the window hides it in the notification area; a left-click restores it.
 
-A prebuilt x64 build is in [`windows/release/Wetterkurve/Wetterkurve.exe`](windows/release/Wetterkurve/Wetterkurve.exe).
+Windows binaries are built from source and distributed as release assets.
+Generated binaries are not stored in Git.
 
 ## Android
 
@@ -103,13 +104,12 @@ This compiles the local GSettings schema, runs the tests, and creates
 
 ## Release
 
-1. Tag a tested commit as `vX.Y.Z` and push the tag.
-2. GitHub Actions runs the tests, then creates a GitHub release with the
-   GNOME Shell ZIP and the Windows x64 desktop build attached. The Windows
-   binary is the prebuilt tree in `windows/release/Wetterkurve/`. The Android
-   debug APK from `android/app/build/outputs/apk/debug/` is uploaded to that
-   same GitHub release; a release without GNOME ZIP, Windows zip, and Android
-   APK is incomplete.
+1. Run `./scripts/release.sh` with the .NET 10 SDK to test and build the
+   GNOME ZIP and Windows x64 desktop ZIP from the current source. Build
+   Android separately with JDK 21 and an Android SDK.
+2. Tag the tested commit as `vX.Y.Z`. After reviewing the packages, create
+   a GitHub release and attach the GNOME ZIP, Windows ZIP and Android APK.
+   The tag workflow verifies the source; it does not publish packages.
 3. Submit a tested tag to extensions.gnome.org manually through the protected
    **Submit Wetterkurve to GNOME Extensions** workflow.
 

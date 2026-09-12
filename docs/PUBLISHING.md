@@ -10,12 +10,11 @@
    them to a repository secret, workflow file, shell history, or `.env` file.
 4. Run `./scripts/release.sh` locally and inspect the generated ZIP.
 5. Create and push a signed or annotated tag, for example `v1.0.0`. The
-   **Create Wetterkurve release** workflow repeats the tests and attaches both
-   the GNOME Shell ZIP and the Windows x64 desktop build
-   (`Wetterkurve-Windows-x64.zip` from `windows/release/Wetterkurve/`). Upload
-   the Android debug APK (`Wetterkurve-android-<versionName>.apk`) to the same
-   GitHub release. A GitHub release is incomplete without the GNOME ZIP, the
-   Windows binary, and the Android APK.
+   **Verify Wetterkurve release** workflow repeats the GNOME checks. Build
+   Windows with the .NET 10 SDK from the same commit using
+   `./scripts/release.sh`; generated binaries stay outside Git. After
+   reviewing all packages, create the release and attach the GNOME ZIP,
+   `Wetterkurve-Windows-x64.zip` and the matching Android APK.
 6. To update extensions.gnome.org, start **Submit Wetterkurve to GNOME
    Extensions** from the Actions tab, enter that tested tag, and approve the
    protected `gnome-extension-store` environment only after reviewing its test
