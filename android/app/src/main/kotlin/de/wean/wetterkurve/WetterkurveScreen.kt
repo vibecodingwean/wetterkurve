@@ -110,7 +110,7 @@ fun WetterkurveScreen(state: UiState, model: WetterkurveViewModel) {
                 model.toggleWind()
             }
         }
-        ChartLegend(model)
+        ChartLegend(state.language)
         Text(model.t("chartRainScale"), color = Muted, fontSize = 14.sp)
         BigButton(model.t("refreshWeather"), Modifier.fillMaxWidth()) {
             model.refresh(true)
@@ -172,7 +172,7 @@ private fun SearchBox(state: UiState, model: WetterkurveViewModel) {
 }
 
 @Composable
-private fun ChartLegend(model: WetterkurveViewModel) {
+private fun ChartLegend(language: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -187,14 +187,14 @@ private fun ChartLegend(model: WetterkurveViewModel) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                LegendRow(model.t("temperature"), ChartRenderer.LegendSample.Temperature)
-                LegendRow(model.t("rainChance"), ChartRenderer.LegendSample.Chance)
-                LegendRow(model.t("clouds"), ChartRenderer.LegendSample.Clouds)
+                LegendRow(Language.text(language, "temperature"), ChartRenderer.LegendSample.Temperature)
+                LegendRow(Language.text(language, "rainChance"), ChartRenderer.LegendSample.Chance)
+                LegendRow(Language.text(language, "clouds"), ChartRenderer.LegendSample.Clouds)
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                LegendRow(model.t("feelsLike"), ChartRenderer.LegendSample.FeelsLike)
-                LegendRow(model.t("rainAmount"), ChartRenderer.LegendSample.Amount)
-                LegendRow(model.t("wind"), ChartRenderer.LegendSample.Wind)
+                LegendRow(Language.text(language, "feelsLike"), ChartRenderer.LegendSample.FeelsLike)
+                LegendRow(Language.text(language, "rainAmount"), ChartRenderer.LegendSample.Amount)
+                LegendRow(Language.text(language, "wind"), ChartRenderer.LegendSample.Wind)
             }
         }
     }
