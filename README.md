@@ -121,3 +121,7 @@ GitHub environment. Details and the first-release checklist are in
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Website and tutorial
+
+Explore the app and its German tutorial at [app.wean.de/wetterkurve](https://app.wean.de/wetterkurve/). Website source lives in `website/`; video binaries are hosted separately.
