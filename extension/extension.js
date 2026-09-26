@@ -428,13 +428,16 @@ export default class WetterkurveExtension extends Extension {
             GLib.source_remove(this._nowMarkerTimeoutId);
             this._nowMarkerTimeoutId = null;
         }
-        if (this._searchTimeoutId)
+        if (this._searchTimeoutId) {
             GLib.source_remove(this._searchTimeoutId);
+            this._searchTimeoutId = null;
+        }
+        const session = this._session;
+        this._session = null;
         this._forecastCancellable?.cancel();
         this._searchCancellable?.cancel();
-        this._indicator?.destroy();
-        this._indicator = null;
-        this._session = null;
+        session?.abort();
+        this._destroyUi();
         this._forecastCancellable = null;
         this._searchCancellable = null;
         this._settings = null;
@@ -444,6 +447,38 @@ export default class WetterkurveExtension extends Extension {
         this._payload = null;
         this._language = null;
         this._locale = null;
+    }
+
+    _destroyUi() {
+        if (this._indicator) {
+            if (this._menuOpenSignalId)
+                this._indicator.menu.disconnect(this._menuOpenSignalId);
+            this._indicator.destroy();
+        }
+        this._indicator = null;
+        this._menuOpenSignalId = null;
+        this._panelIcon = null;
+        this._panelText = null;
+        this._locationBar = null;
+        this._locationTabs = null;
+        this._removeLocationButton = null;
+        this._searchBox = null;
+        this._searchEntry = null;
+        this._searchHint = null;
+        this._searchResults = null;
+        this._title = null;
+        this._condition = null;
+        this._bigIcon = null;
+        this._temperature = null;
+        this._refreshButton = null;
+        this._feels = null;
+        this._rain = null;
+        this._wind = null;
+        this._humidity = null;
+        this._cloudToggle = null;
+        this._windToggle = null;
+        this._chart = null;
+        this._status = null;
     }
 
     _t(key, values) {
@@ -604,7 +639,7 @@ export default class WetterkurveExtension extends Extension {
             languageMenu.menu.addMenuItem(choice);
         }
         this._indicator.menu.addMenuItem(languageMenu);
-        this._indicator.menu.connect('open-state-changed', (_menu, isOpen) => {
+        this._menuOpenSignalId = this._indicator.menu.connect('open-state-changed', (_menu, isOpen) => {
             if (isOpen && GLib.get_monotonic_time() / 1e6 - this._lastUpdated >
                 STALE_SECONDS)
                 this._refresh();
@@ -623,7 +658,8 @@ export default class WetterkurveExtension extends Extension {
             GLib.source_remove(this._searchTimeoutId);
             this._searchTimeoutId = null;
         }
-        this._indicator.destroy();
+        this._searchCancellable = null;
+        this._destroyUi();
         this._buildUi();
         Main.panel.addToStatusArea(this.uuid, this._indicator);
         if (this._payload)
@@ -784,7 +820,8 @@ export default class WetterkurveExtension extends Extension {
             GLib.PRIORITY_DEFAULT,
             this._searchCancellable,
             (session, result) => {
-                if (requestId !== this._searchRequestId || !this._indicator)
+                if (requestId !== this._searchRequestId ||
+                    session !== this._session || !this._indicator)
                     return;
                 try {
                     const bytes = session.send_and_read_finish(result);
@@ -905,7 +942,8 @@ export default class WetterkurveExtension extends Extension {
             GLib.PRIORITY_DEFAULT,
             this._forecastCancellable,
             (session, result) => {
-                if (requestId !== this._forecastRequestId || !this._indicator)
+                if (requestId !== this._forecastRequestId ||
+                    session !== this._session || !this._indicator)
                     return;
                 this._requestInFlight = false;
                 this._refreshButton?.remove_style_pseudo_class('active');

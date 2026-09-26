@@ -19,6 +19,7 @@ const extension = new ExtensionClass();
 const saved = new Map();
 let cancelled = 0;
 let destroyed = 0;
+let disconnected = 0;
 let opened = 0;
 extension._language = 'en';
 extension._locale = 'en-US';
@@ -28,10 +29,17 @@ extension._searchTimeoutId = 1;
 extension._searchCancellable = {cancel() { cancelled++; }};
 extension._payload = {current: {temperature_2m: 20}};
 const payload = extension._payload;
-extension._indicator = {destroy() { destroyed++; }};
+extension._indicator = {
+    destroy() { destroyed++; },
+    menu: {disconnect() { disconnected++; }},
+};
+extension._menuOpenSignalId = 1;
 extension._buildUi = function () {
     this.label = this._t('searchLocation');
-    this._indicator = {destroy() { destroyed++; }, menu: {open() { opened++; }}};
+    this._menuOpenSignalId = 2;
+    this._indicator = {destroy() { destroyed++; }, menu: {
+        disconnect() { disconnected++; }, open() { opened++; },
+    }};
 };
 extension._render = function (data) { assert.equal(data, payload); this.renderedLanguage = this._language; };
 extension._selectLanguage('de');
@@ -46,6 +54,7 @@ assert.equal(removed, 1);
 assert.equal(added, 1);
 assert.equal(opened, 1);
 assert.equal(destroyed, 1);
+assert.equal(disconnected, 1);
 extension._selectLanguage('de');
 assert.equal(destroyed, 1, 'selecting the active language must preserve the UI');
 extension._selectLanguage('en');
