@@ -432,11 +432,13 @@ export default class WetterkurveExtension extends Extension {
             GLib.source_remove(this._searchTimeoutId);
             this._searchTimeoutId = null;
         }
-        const session = this._session;
-        this._session = null;
+        this._forecastRequestId++;
+        this._searchRequestId++;
         this._forecastCancellable?.cancel();
         this._searchCancellable?.cancel();
-        session?.abort();
+        if (this._session)
+            this._session.abort();
+        this._session = null;
         this._destroyUi();
         this._forecastCancellable = null;
         this._searchCancellable = null;
@@ -453,6 +455,7 @@ export default class WetterkurveExtension extends Extension {
         if (this._indicator) {
             if (this._menuOpenSignalId)
                 this._indicator.menu.disconnect(this._menuOpenSignalId);
+            // Destroying the indicator also destroys its child actors.
             this._indicator.destroy();
         }
         this._indicator = null;

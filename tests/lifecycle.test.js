@@ -89,7 +89,10 @@ class Session {
 }
 
 class Cancellable {
-    cancel() { this.cancelled = true; }
+    cancel() {
+        this.cancelled = true;
+        this.onCancel?.();
+    }
 }
 
 const settings = {
@@ -152,9 +155,44 @@ extension._selectLanguage('de');
 assert.equal(oldMenu.disconnected.length, 1,
     'language rebuild disconnects the old menu signal');
 assert.equal(extension._session, oldSession, 'language rebuild keeps the active request');
+extension._searchBox.visible = true;
+extension._searchEntry.set_text('Berlin');
+extension._searchLocations();
+assert.equal(oldSession.requests.length, 3,
+    'language rebuild can start a fresh search before disable');
 
+let renderedDuringDisable = false;
+let searchRenderedDuringDisable = false;
+let deliveredDuringDisable = 0;
+extension._render = () => { renderedDuringDisable = true; };
+extension._renderLocationResults = () => { searchRenderedDuringDisable = true; };
+const forecastRequest = oldSession.requests[0];
+const activeSearchRequest = oldSession.requests[2];
+const forecastResult = {get_data: () => new TextEncoder().encode('{}')};
+const searchResult = {get_data: () => new TextEncoder().encode('{"results":[]}')};
+extension._forecastCancellable.onCancel = () => {
+    deliveredDuringDisable++;
+    forecastRequest.callback(oldSession, forecastResult);
+};
+extension._searchCancellable.onCancel = () => {
+    deliveredDuringDisable++;
+    activeSearchRequest.callback(oldSession, searchResult);
+};
+const abort = oldSession.abort.bind(oldSession);
+oldSession.abort = () => {
+    abort();
+    deliveredDuringDisable += 2;
+    forecastRequest.callback(oldSession, forecastResult);
+    activeSearchRequest.callback(oldSession, searchResult);
+};
 extension.disable();
 assert.equal(oldSession.aborted, true, 'disable aborts the Soup session');
+assert.equal(deliveredDuringDisable, 4,
+    'both request callbacks ran during cancellation and abort');
+assert.equal(renderedDuringDisable, false,
+    'a callback delivered during teardown must not render into the old UI');
+assert.equal(searchRenderedDuringDisable, false,
+    'a search callback delivered during teardown must not render into the old UI');
 assert.equal(extension._indicator, null);
 assert.equal(extension._panelIcon, null, 'disable releases child actor references');
 assert.equal(extension._searchEntry, null, 'disable releases entry references');
