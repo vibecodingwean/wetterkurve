@@ -13,8 +13,8 @@ android {
         applicationId = "com.wetterkurve"
         minSdk = 26
         targetSdk = 36
-        versionCode = 33
-        versionName = "1.1.21"
+        versionCode = 34
+        versionName = "1.1.22"
     }
 
     signingConfigs {
