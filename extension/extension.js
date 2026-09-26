@@ -146,8 +146,7 @@ class ForecastChart extends St.DrawingArea {
             this._drawCloudStrip(cr, data, x, cloudTop, cloudBottom);
 
         for (let i = 0; i < data.length - 1; i++) {
-            const hour = new Date(data[i].time).getHours();
-            if (hour >= 21 || hour < 6) {
+            if (this._isNight(data[i].time)) {
                 cr.setSourceRGBA(0.13, 0.29, 0.62, 0.42);
                 cr.rectangle(x(i), plot.top, x(i + 1) - x(i) + 1, plotHeight);
                 cr.fill();
@@ -155,10 +154,8 @@ class ForecastChart extends St.DrawingArea {
         }
 
         for (let i = 1; i < data.length - 1; i++) {
-            const previousHour = new Date(data[i - 1].time).getHours();
-            const hour = new Date(data[i].time).getHours();
-            const wasNight = previousHour >= 21 || previousHour < 6;
-            const isNight = hour >= 21 || hour < 6;
+            const wasNight = this._isNight(data[i - 1].time);
+            const isNight = this._isNight(data[i].time);
             if (wasNight === isNight)
                 continue;
 
@@ -274,13 +271,17 @@ class ForecastChart extends St.DrawingArea {
         }
     }
 
+    _isNight(time) {
+        const hour = new Date(time).getHours();
+        return hour >= 21 || hour < 6;
+    }
+
     _drawCloudStrip(cr, data, x, cloudTop, cloudBottom) {
         const dayPlot = [26 / 255, 32 / 255, 44 / 255];
         const nightPlot = [29 / 255, 50 / 255, 92 / 255];
         const cloudGray = [200 / 255, 200 / 255, 200 / 255];
         for (let i = 0; i < data.length - 1; i++) {
-            const hour = new Date(data[i].time).getHours();
-            const night = hour >= 21 || hour < 6;
+            const night = this._isNight(data[i].time);
             const cover = Math.min(100, Math.max(0, data[i].cloudCover ?? 0)) / 100;
             const base = night ? nightPlot : dayPlot;
             cr.setSourceRGB(
