@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wetterkurve</string>
-    <string name="compact_widget_description">Temperature bar</string>
+    <string name="compact_widget_description">Current weather</string>
+    <string name="forecast_widget_description">Current weather and next six hours</string>
     <string name="chart_widget_description">Three-day chart</string>
+    <string name="compact_widget_preview">Berlin  ☀\n11°\nPartly cloudy\nH:12° L:9°</string>
+    <string name="forecast_widget_preview">Berlin  11°\nPartly cloudy  H:12° L:9°\n10:00   11:00   12:00   13:00   14:00   15:00\n☀     ☀     ☀     ☀     ☀     ☀\n11°      11°      11°      11°      12°      11°</string>
 </resources>

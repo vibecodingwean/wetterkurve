@@ -22,7 +22,11 @@ data class HourlyPoint(
     val weatherCode: Int,
     val wind: Double,
     val cloudCover: Double = 0.0,
+    val isDay: Boolean? = null,
+    val solarEvent: SolarEvent? = null,
 )
+
+enum class SolarEvent { SUNRISE, SUNSET }
 
 data class DaySegment(
     val key: String,
@@ -41,14 +45,23 @@ data class AppState(
     val locations: List<WeatherLocation>,
     val activeLocation: Int,
     val showClouds: Boolean = true,
-    val showWind: Boolean = true,
+    val showWind: Boolean = false,
     val language: String = "en",
+    val showFeelsLike: Boolean = false,
+    val showWidgetWeatherImages: Boolean = false,
 )
 
 @Serializable
 data class ForecastPayload(
     val current: CurrentWeather? = null,
     val hourly: HourlyWeather? = null,
+    val daily: SolarTimes? = null,
+)
+
+@Serializable
+data class SolarTimes(
+    val sunrise: List<String> = emptyList(),
+    val sunset: List<String> = emptyList(),
 )
 
 @Serializable
@@ -58,6 +71,10 @@ data class CurrentWeather(
     @SerialName("weather_code") val weatherCode: Int,
     @SerialName("wind_speed_10m") val windSpeed: Double,
     @SerialName("relative_humidity_2m") val relativeHumidity: Double,
+    @SerialName("is_day") val isDay: Int? = null,
+    val time: String? = null,
+    val rain: Double? = null,
+    val snowfall: Double? = null,
 )
 
 @Serializable
@@ -70,6 +87,7 @@ data class HourlyWeather(
     @SerialName("weather_code") val weatherCode: List<Int> = emptyList(),
     @SerialName("wind_speed_10m") val windSpeed: List<Double> = emptyList(),
     @SerialName("cloud_cover") val cloudCover: List<Double> = emptyList(),
+    @SerialName("is_day") val isDay: List<Int> = emptyList(),
 )
 
 @Serializable
@@ -102,6 +120,8 @@ data class AppStateJson(
     val locations: List<WeatherLocationJson> = emptyList(),
     val activeLocation: Int = 0,
     val showClouds: Boolean = true,
-    val showWind: Boolean = true,
+    val showWind: Boolean = false,
     val language: String = "en",
+    val showFeelsLike: Boolean = false,
+    val showWidgetWeatherImages: Boolean = false,
 )

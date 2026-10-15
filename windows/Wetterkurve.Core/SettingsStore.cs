@@ -37,8 +37,10 @@ public static class SettingsStore
                 : null;
             var showClouds = !root.TryGetProperty("showClouds", out var cloudsElement) ||
                 cloudsElement.ValueKind != JsonValueKind.False;
-            var showWind = !root.TryGetProperty("showWind", out var windElement) ||
-                windElement.ValueKind != JsonValueKind.False;
+            var showWind = root.TryGetProperty("showWind", out var windElement) &&
+                windElement.ValueKind == JsonValueKind.True;
+            var showFeelsLike = root.TryGetProperty("showFeelsLike", out var feelsLikeElement) &&
+                feelsLikeElement.ValueKind == JsonValueKind.True;
             return new AppState
             {
                 Locations = parsed,
@@ -47,6 +49,7 @@ public static class SettingsStore
                 IndicatorTop = indicatorTop,
                 ShowClouds = showClouds,
                 ShowWind = showWind,
+                ShowFeelsLike = showFeelsLike,
                 Language = Language.ForLocale(root.TryGetProperty("language", out var language) &&
                     language.ValueKind == JsonValueKind.String ? language.GetString() : null),
             };
@@ -69,6 +72,7 @@ public static class SettingsStore
             indicatorTop = state.IndicatorTop,
             showClouds = state.ShowClouds,
             showWind = state.ShowWind,
+            showFeelsLike = state.ShowFeelsLike,
             language = Language.ForLocale(state.Language),
         });
         File.WriteAllText(path, json);

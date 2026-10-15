@@ -1,9 +1,48 @@
 using Xunit;
+using SkiaSharp;
 
 namespace Wetterkurve.Tests;
 
 public class WeatherServiceTests
 {
+    [Fact]
+    public void Fresh_defaults_and_saved_choices_include_feels_like()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+        try
+        {
+            var defaults = SettingsStore.Load(path);
+            Assert.Equal("Berlin", defaults.Locations[0].Name);
+            Assert.True(defaults.ShowClouds);
+            Assert.False(defaults.ShowWind);
+            Assert.False(defaults.ShowFeelsLike);
+
+            defaults.Locations = [new WeatherLocation("48.137,11.576", "Munich", "Munich, Bavaria, Germany", 48.137, 11.576, "Europe/Berlin")];
+            defaults.ShowClouds = false;
+            defaults.ShowWind = true;
+            defaults.ShowFeelsLike = true;
+            defaults.Language = "de";
+            SettingsStore.Save(defaults, path);
+            var saved = SettingsStore.Load(path);
+            Assert.Equal("Munich", saved.Locations[0].Name);
+            Assert.False(saved.ShowClouds);
+            Assert.True(saved.ShowWind);
+            Assert.True(saved.ShowFeelsLike);
+            Assert.Equal("de", saved.Language);
+
+            var oldState = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+            oldState.Remove("showFeelsLike");
+            File.WriteAllText(path, oldState.ToJsonString());
+            var migrated = SettingsStore.Load(path);
+            Assert.Equal("Munich", migrated.Locations[0].Name);
+            Assert.False(migrated.ShowClouds);
+            Assert.True(migrated.ShowWind);
+            Assert.False(migrated.ShowFeelsLike);
+            Assert.Equal("de", migrated.Language);
+        }
+        finally { File.Delete(path); }
+    }
+
     static ForecastPayload SamplePayload()
     {
         var hours = Enumerable.Range(0, 96).Select(i =>
@@ -145,5 +184,37 @@ public class WeatherServiceTests
         Assert.Equal((byte)'P', png[1]);
         Assert.Equal((byte)'N', png[2]);
         Assert.Equal((byte)'G', png[3]);
+    }
+
+    [Fact]
+    public void Hidden_feels_like_does_not_draw_or_change_the_temperature_range()
+    {
+        var time = new DateTime(2026, 7, 30);
+        var forecast = Enumerable.Range(0, 72)
+            .Select(i => new HourlyPoint(time.AddHours(i), 20, 19, 0, 0, 0, 5, 0)).ToArray();
+        var changed = forecast.Select(point => point with { Apparent = 100 }).ToArray();
+        var hidden = ChartRenderer.RenderPng(forecast, "en-US", 680, 250, true, false, false);
+        var hiddenChanged = ChartRenderer.RenderPng(changed, "en-US", 680, 250, true, false, false);
+        var visible = ChartRenderer.RenderPng(changed, "en-US", 680, 250, true, false, true);
+        Assert.Equal(hidden, hiddenChanged);
+        Assert.False(hidden.SequenceEqual(visible));
+        Assert.Equal(hidden, ChartRenderer.RenderPng(forecast, "en-US", 680, 250));
+    }
+
+    [Fact]
+    public void Daytime_uses_blue_plot_and_cloud_base_while_night_is_dark()
+    {
+        var time = new DateTime(2026, 7, 30);
+        var forecast = Enumerable.Range(0, 72)
+            .Select(i => new HourlyPoint(time.AddHours(i), 20, 19, 0, 0, 0, 5, 0)).ToArray();
+        using var bitmap = SKBitmap.Decode(ChartRenderer.RenderPng(
+            forecast, "en-US", 680, 250, true, false, false));
+        var nightCloud = bitmap.GetPixel(55, 50);
+        var dayCloud = bitmap.GetPixel(125, 50);
+        Assert.Equal(new SKColor(26, 32, 44), nightCloud);
+        Assert.Equal(new SKColor(29, 50, 92), dayCloud);
+        var nightPlot = bitmap.GetPixel(55, 100);
+        var dayPlot = bitmap.GetPixel(125, 100);
+        Assert.True(dayPlot.Blue > nightPlot.Blue);
     }
 }

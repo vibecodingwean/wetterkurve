@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wetterkurve</string>
-    <string name="compact_widget_description">Temperaturleiste</string>
+    <string name="compact_widget_description">Aktuelles Wetter</string>
+    <string name="forecast_widget_description">Aktuelles Wetter und die nächsten sechs Stunden</string>
     <string name="chart_widget_description">3-Tage-Kurve</string>
+    <string name="compact_widget_preview">Berlin  ☀\n11°\nTeilweise bewölkt\nH:12° T:9°</string>
+    <string name="forecast_widget_preview">Berlin  11°\nTeilweise bewölkt  H:12° T:9°\n10:00   11:00   12:00   13:00   14:00   15:00\n☀     ☀     ☀     ☀     ☀     ☀\n11°      11°      11°      11°      12°      11°</string>
 </resources>

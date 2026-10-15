@@ -2,12 +2,13 @@
 
 Homescreen widgets plus a configuration app: up to three saved Open-Meteo
 locations. The app is settings only (large location buttons, search,
-cloud and wind toggles, chart legend, refresh). The three-day chart lives
+cloud, wind and feels-like toggles, chart legend, refresh). The three-day chart lives
 in the chart widget. The temperature
 widget is a thin full-width bar with a refresh control.
 
 English is the default. Select **Deutsch** in the app for German; both
-widgets follow the saved choice.
+widgets follow the saved choice. Berlin is the initial location, clouds start
+on, and wind and feels-like temperature start off. Saved choices are kept.
 
 ## Build
 

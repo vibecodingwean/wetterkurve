@@ -38,20 +38,20 @@ chart._drawCloudStrip({
     moveTo() {}, lineTo() {}, stroke() {},
 }, data, index => index, 40, 64);
 assert.deepEqual(cloudColors.map(color => color[0]),
-    [26 / 255, 29 / 255, 29 / 255, 26 / 255],
-    'cloud strip must shade 21:00 through 05:59 as night');
+    [29 / 255, 26 / 255, 26 / 255, 29 / 255],
+    'cloud strip must use dark colors during 21:00 through 05:59');
 
 let color = [];
 let pendingRectangle = null;
 let pendingLine = null;
-const nightRectangles = [];
+const dayRectangles = [];
 const transitions = [];
 const cr = {
     setSourceRGBA(...rgba) { color = rgba; },
     rectangle(...bounds) { pendingRectangle = bounds; },
     fill() {
         if (color.join(',') === '0.13,0.29,0.62,0.42')
-            nightRectangles.push(pendingRectangle);
+            dayRectangles.push(pendingRectangle);
     },
     moveTo(x, y) { pendingLine = [x, y]; },
     lineTo(x, y) { pendingLine = [...pendingLine, x, y]; },
@@ -68,14 +68,29 @@ chart._forecast = data;
 chart._showClouds = false;
 chart._showWind = false;
 chart._drawDayStrip = () => {};
-chart._smoothLine = () => {};
+const curves = [];
+chart._smoothLine = (_cr, values, _x, y) => curves.push({values, y20: y(20)});
 chart._repaint({get_context: () => cr, get_surface_size: () => [300, 300]});
-assert.equal(nightRectangles.length, 2,
-    'plot must shade both night intervals');
-assert.deepEqual(nightRectangles.map(bounds => bounds[0]), [95, 154],
-    'night shading must start at 21:00 and 05:00');
+assert.equal(dayRectangles.length, 2,
+    'plot must shade both daylight intervals');
+assert.deepEqual(dayRectangles.map(bounds => bounds[0]), [36, 213],
+    'daylight shading must start at 20:00 and 06:00');
+assert.equal(curves.length, 1, 'default chart must omit the feels-like curve');
+const noFeelsY20 = curves[0].y20;
 assert.equal(transitions.length, 2,
     'plot must mark day-to-night and night-to-day transitions');
 assert.deepEqual(transitions.map(line => line[0]), [95, 213],
     'transition markers must align with 21:00 and 06:00');
+curves.length = 0;
+chart._showFeelsLike = true;
+chart._forecast = data.map(point => ({...point, apparent: 100}));
+chart._repaint({get_context: () => cr, get_surface_size: () => [300, 300]});
+assert.equal(curves.length, 2, 'enabled chart must draw the feels-like curve');
+assert(curves[1].y20 > noFeelsY20,
+    'enabled feels-like values must expand the temperature range');
+curves.length = 0;
+chart._showFeelsLike = false;
+chart._repaint({get_context: () => cr, get_surface_size: () => [300, 300]});
+assert.equal(curves[0].y20, noFeelsY20,
+    'hidden feels-like values must not affect the temperature range');
 console.log('night.test.js: OK');

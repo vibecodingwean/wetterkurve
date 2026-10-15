@@ -98,6 +98,7 @@ internal fun renderChartFace(
         chartHeight,
         showClouds = snapshot.showClouds,
         showWind = snapshot.showWind,
+        showFeelsLike = snapshot.showFeelsLike,
     )
     canvas.restore()
 

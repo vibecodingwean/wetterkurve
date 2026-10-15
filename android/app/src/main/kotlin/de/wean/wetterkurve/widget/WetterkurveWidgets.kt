@@ -8,7 +8,6 @@ import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -37,21 +36,16 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.ContentScale
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import de.wean.wetterkurve.Language
+import de.wean.wetterkurve.HourlyPoint
 import de.wean.wetterkurve.MainActivity
 import de.wean.wetterkurve.R
 import de.wean.wetterkurve.WeatherService
 import de.wean.wetterkurve.data.ForecastRepository
-import de.wean.wetterkurve.iconDrawable
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -66,8 +60,18 @@ data class WidgetSnapshot(
     val icon: String,
     val status: String,
     val chart: Bitmap?,
+    val hours: List<HourlyPoint> = emptyList(),
+    val temperatureRange: String? = null,
     val showClouds: Boolean = true,
-    val showWind: Boolean = true,
+    val showWind: Boolean = false,
+    val showFeelsLike: Boolean = false,
+    val isDay: Boolean = true,
+    val weatherCode: Int? = null,
+    val windSpeed: Double = 0.0,
+    val rain: Double? = null,
+    val snowfall: Double? = null,
+    val backgroundSunEvent: String? = null,
+    val showWidgetWeatherImages: Boolean = false,
 )
 
 private val TickKey = longPreferencesKey("tick")
@@ -75,6 +79,7 @@ private val TickKey = longPreferencesKey("tick")
 object WetterkurveWidgets {
     suspend fun updateAll(context: Context) {
         bumpAndUpdate(context, CompactWidget(), CompactWidgetReceiver::class.java)
+        bumpAndUpdate(context, ForecastWidget(), ForecastWidgetReceiver::class.java)
         bumpAndUpdate(context, ChartWidget(), ChartWidgetReceiver::class.java)
         pingHosts(context)
     }
@@ -95,7 +100,7 @@ object WetterkurveWidgets {
 
     fun pingHosts(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
-        listOf(CompactWidgetReceiver::class.java, ChartWidgetReceiver::class.java).forEach { cls ->
+        listOf(CompactWidgetReceiver::class.java, ForecastWidgetReceiver::class.java, ChartWidgetReceiver::class.java).forEach { cls ->
             val ids = manager.getAppWidgetIds(ComponentName(context, cls))
             if (ids.isEmpty()) return@forEach
             val intent = Intent(context, cls).setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
@@ -115,7 +120,10 @@ object WetterkurveWidgets {
         val locale = Language.localeTag(language)
         val location = state.locations[state.activeLocation.coerceIn(0, state.locations.lastIndex)]
         val cached = try {
-            repo.cachedForecast(location.id) ?: repo.refresh(location, force = true)
+            val existing = repo.cachedForecast(location.id)
+            if (existing == null || !WeatherService.hasWidgetSkyData(existing.payload)) {
+                repo.refresh(location, force = true)
+            } else existing
         } catch (_: Exception) {
             repo.cachedForecast(location.id)
         }
@@ -130,10 +138,19 @@ object WetterkurveWidgets {
                 chart = null,
                 showClouds = state.showClouds,
                 showWind = state.showWind,
+                showFeelsLike = state.showFeelsLike,
+                showWidgetWeatherImages = state.showWidgetWeatherImages,
             )
         }
-        val condition = WeatherService.weatherInfo(current.weatherCode, language)
+        val locationNow = LocalDateTime.now(ZoneId.of(location.timezone))
+        val condition = WeatherService.currentCondition(cached.payload, locationNow, language)
         val temperature = "${WeatherService.round(current.temperature)}°"
+        val hours = WeatherService.nextHours(cached.payload, locationNow)
+        val today = cached.payload.hourly?.let { hourly ->
+            hourly.time.indices.mapNotNull { index ->
+                if (hourly.time[index].startsWith(locationNow.toLocalDate().toString())) hourly.temperature.getOrNull(index) else null
+            }
+        }.orEmpty()
         val updated = LocalDateTime.ofInstant(
             Instant.ofEpochSecond(cached.fetchedAtEpochSeconds),
             ZoneId.systemDefault(),
@@ -143,10 +160,20 @@ object WetterkurveWidgets {
             temperature = temperature,
             condition = condition.description,
             icon = condition.icon,
+            isDay = WeatherService.currentIsDay(cached.payload, locationNow),
+            weatherCode = current.weatherCode,
+            windSpeed = current.windSpeed,
+            rain = current.rain,
+            snowfall = current.snowfall,
+            backgroundSunEvent = currentBackgroundSunEvent(cached.payload.daily, locationNow),
             status = Language.text(language, "updated", mapOf("time" to updated)),
             chart = null,
+            hours = hours,
+            temperatureRange = if (today.isEmpty()) null else "H:${WeatherService.round(today.max())}° ${if (language == "de") "T" else "L"}:${WeatherService.round(today.min())}°",
             showClouds = state.showClouds,
             showWind = state.showWind,
+            showFeelsLike = state.showFeelsLike,
+            showWidgetWeatherImages = state.showWidgetWeatherImages,
         )
         if (faceWidth == null || faceHeight == null) return snapshot
         val forecast = WeatherService.chartForecast(cached.payload)
@@ -178,10 +205,37 @@ class CompactWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val tick = currentState<Preferences>()[TickKey]
-            val snapshot = remember(tick) {
+            val size = LocalSize.current
+            val density = context.resources.displayMetrics.density
+            val snapshot = remember(tick, size.width, size.height) {
                 runBlocking { WetterkurveWidgets.snapshot(context) }
             }
-            CompactContent(snapshot)
+            val face = remember(snapshot, size.width, size.height) {
+                renderWeatherCardFace(context, snapshot, (size.width.value * density).roundToInt().coerceAtLeast(1),
+                    (size.height.value * density).roundToInt().coerceAtLeast(1), false)
+            }
+            WeatherCardContent(face, snapshot)
+        }
+    }
+}
+
+class ForecastWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Exact
+    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        provideContent {
+            val tick = currentState<Preferences>()[TickKey]
+            val size = LocalSize.current
+            val density = context.resources.displayMetrics.density
+            val snapshot = remember(tick, size.width, size.height) {
+                runBlocking { WetterkurveWidgets.snapshot(context) }
+            }
+            val face = remember(snapshot, size.width, size.height) {
+                renderWeatherCardFace(context, snapshot, (size.width.value * density).roundToInt().coerceAtLeast(1),
+                    (size.height.value * density).roundToInt().coerceAtLeast(1), true)
+            }
+            WeatherCardContent(face, snapshot)
         }
     }
 }
@@ -213,52 +267,28 @@ class CompactWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget = CompactWidget()
 }
 
+class ForecastWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget = ForecastWidget()
+}
+
+@Composable
+private fun WeatherCardContent(face: Bitmap, snapshot: WidgetSnapshot) {
+    val openApp = actionStartActivity(Intent(LocalContext.current, MainActivity::class.java))
+    Box(GlanceModifier.fillMaxSize()) {
+        Image(ImageProvider(face), snapshot.locationName + ", " + snapshot.temperature + ", " + snapshot.condition,
+            GlanceModifier.fillMaxSize().clickable(openApp), contentScale = ContentScale.FillBounds)
+        Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
+            Text("↻", style = TextStyle(color = OnDark, fontSize = 22.sp),
+                modifier = GlanceModifier.clickable(actionRunCallback<RefreshAction>()).padding(8.dp))
+        }
+    }
+}
+
 class ChartWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget = ChartWidget()
 }
 
 private val OnDark = androidx.glance.unit.ColorProvider(Color.White)
-
-@Composable
-private fun CompactContent(snapshot: WidgetSnapshot) {
-    val openApp = actionStartActivity(Intent(LocalContext.current, MainActivity::class.java))
-    Row(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(Color(0xFF202A3A))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            modifier = GlanceModifier.defaultWeight().clickable(openApp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Image(
-                provider = ImageProvider(iconDrawable(snapshot.icon)),
-                contentDescription = snapshot.condition,
-                modifier = GlanceModifier.size(36.dp),
-            )
-            Spacer(GlanceModifier.width(10.dp))
-            Text(
-                snapshot.temperature,
-                style = TextStyle(color = OnDark, fontSize = 26.sp, fontWeight = FontWeight.Medium),
-            )
-            Spacer(GlanceModifier.width(12.dp))
-            Text(
-                snapshot.locationName,
-                style = TextStyle(color = OnDark, fontSize = 20.sp),
-                maxLines = 1,
-            )
-        }
-        Text(
-            "↻",
-            style = TextStyle(color = OnDark, fontSize = 26.sp),
-            modifier = GlanceModifier
-                .clickable(actionRunCallback<RefreshAction>())
-                .padding(8.dp),
-        )
-    }
-}
 
 @Composable
 private fun ChartContent(snapshot: WidgetSnapshot) {

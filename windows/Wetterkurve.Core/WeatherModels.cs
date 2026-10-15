@@ -63,6 +63,7 @@ public sealed record AppState
     public double? IndicatorLeft { get; set; }
     public double? IndicatorTop { get; set; }
     public bool ShowClouds { get; set; } = true;
-    public bool ShowWind { get; set; } = true;
+    public bool ShowWind { get; set; } = false;
+    public bool ShowFeelsLike { get; set; } = false;
     public string Language { get; set; } = "en";
 }

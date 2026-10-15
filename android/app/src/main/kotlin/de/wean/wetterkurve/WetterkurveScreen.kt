@@ -26,6 +26,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -110,12 +114,32 @@ fun WetterkurveScreen(state: UiState, model: WetterkurveViewModel) {
                 model.toggleWind()
             }
         }
+        BigButton(model.t("feelsLike"), Modifier.fillMaxWidth(), outlined = !state.showFeelsLike) {
+            model.toggleFeelsLike()
+        }
         ChartLegend(state.language)
         Text(model.t("chartRainScale"), color = Muted, fontSize = 14.sp)
         BigButton(model.t("refreshWeather"), Modifier.fillMaxWidth()) {
             model.refresh(true)
         }
         Text(state.status, color = Muted, fontSize = 14.sp)
+        Row(
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                .background(Card).padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(model.t("widgetWeatherImages"), color = White, fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold)
+                Text(model.t("widgetWeatherImagesHint"), color = Muted, fontSize = 13.sp)
+            }
+            Switch(
+                modifier = Modifier.semantics { contentDescription = model.t("widgetWeatherImages") },
+                checked = state.showWidgetWeatherImages,
+                onCheckedChange = model::setWidgetWeatherImages,
+                colors = SwitchDefaults.colors(checkedThumbColor = White, checkedTrackColor = ButtonBg),
+            )
+        }
         Text(model.t("addWidgetHint"), color = Muted, fontSize = 14.sp)
     }
 }

@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Documents;
 using System.Windows.Threading;
 using System.Runtime.InteropServices;
 using Drawing = System.Drawing;
@@ -67,9 +68,17 @@ public partial class MainWindow : Window
         WindName.Text = T("wind");
         HumidityName.Text = T("humidity");
         SectionTitle.Text = T("threeDayForecast");
-        LegendLabel.Text = T("chartLegend");
+        var legendText = T("chartLegend");
+        var windMark = legendText.LastIndexOf('━');
+        LegendLabel.Inlines.Clear();
+        LegendLabel.Inlines.Add(new Run(legendText[..windMark]));
+        LegendLabel.Inlines.Add(new Run(legendText[windMark..])
+        {
+            Foreground = new SolidColorBrush(Color.FromRgb(36, 139, 255))
+        });
         CloudToggle.Content = T("clouds");
         WindToggle.Content = T("wind");
+        FeelsLikeToggle.Content = T("feelsLike");
         UpdateLayerButtons();
         ApplyCloudWindowHeight();
         SearchHint.Text = T("enterTwoLetters");
@@ -469,10 +478,19 @@ public partial class MainWindow : Window
         RedrawChart();
     }
 
+    void FeelsLikeToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _state.ShowFeelsLike = !_state.ShowFeelsLike;
+        Persist();
+        UpdateLayerButtons();
+        RedrawChart();
+    }
+
     void UpdateLayerButtons()
     {
         StyleLayerButton(CloudToggle, _state.ShowClouds);
         StyleLayerButton(WindToggle, _state.ShowWind);
+        StyleLayerButton(FeelsLikeToggle, _state.ShowFeelsLike);
     }
 
     static void StyleLayerButton(Button button, bool on)
@@ -594,7 +612,8 @@ public partial class MainWindow : Window
             (int)Math.Round(width),
             (int)Math.Round(height),
             _state.ShowClouds,
-            _state.ShowWind);
+            _state.ShowWind,
+            _state.ShowFeelsLike);
         ChartImage.Source = ToBitmap(png);
     }
 

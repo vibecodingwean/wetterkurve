@@ -14,11 +14,11 @@ public static class WeatherService
     public const int SearchDelayMs = 250;
 
     public static readonly WeatherLocation DefaultLocation = new(
-        "48.137,11.576",
-        "Munich",
-        "Munich, Bavaria, Germany",
-        48.137,
-        11.576,
+        "52.5200,13.4050",
+        "Berlin",
+        "Berlin, Germany",
+        52.520,
+        13.405,
         "Europe/Berlin");
 
     static readonly Dictionary<int, (string Symbol, string De, string En, string Icon)> Wmo = new()

@@ -7,7 +7,7 @@
       <summary>Interface language</summary>
     </key>
     <key name="locations" type="s">
-      <default>'[{"id":"48.137,11.576","name":"Munich","label":"Munich, Bavaria, Germany","latitude":48.137,"longitude":11.576,"timezone":"Europe/Berlin"}]'</default>
+      <default>'[{"id":"52.5200,13.4050","name":"Berlin","label":"Berlin, Germany","latitude":52.520,"longitude":13.405,"timezone":"Europe/Berlin"}]'</default>
       <summary>Saved weather locations</summary>
     </key>
     <key name="active-location" type="i">
@@ -20,8 +20,12 @@
       <summary>Show the cloud-cover band on the forecast chart</summary>
     </key>
     <key name="show-wind" type="b">
-      <default>true</default>
+      <default>false</default>
       <summary>Show the wind curve on the forecast chart</summary>
+    </key>
+    <key name="show-feels-like" type="b">
+      <default>false</default>
+      <summary>Show the feels-like curve on the forecast chart</summary>
     </key>
   </schema>
 </schemalist>

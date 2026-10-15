@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
+const {deepStrictEqual} = require('assert/strict');
 
 function assert(condition, message) {
     if (!condition)
@@ -16,14 +18,16 @@ const language = fs.readFileSync(
 
 assert(source.includes('_drawCloudStrip'), 'GNOME chart must draw a cloud strip');
 assert(source.includes('cloudCover'), 'GNOME cloud strip must use hourly cloud cover');
-assert(source.includes('setLayers(showClouds, showWind)'),
-    'GNOME chart must accept independent cloud and wind layers');
+assert(source.includes('setLayers(showClouds, showWind, showFeelsLike)'),
+    'GNOME chart must accept independent cloud, wind, and feels-like layers');
 assert(source.includes('if (this._showClouds)'),
     'cloud strip must be toggleable');
 assert(source.includes('if (this._showWind)'),
     'wind curve must be toggleable');
+assert(source.includes('if (this._showFeelsLike)'),
+    'feels-like curve must be toggleable');
 assert(source.includes('yWind'), 'wind curve must use a dedicated vertical scale');
-assert(source.includes('#00E272'), 'wind curve must use the Android wind color');
+assert(source.includes('#248BFF'), 'wind curve must use the blue Android wind color');
 assert(source.includes('cr.lineTo(x(data.length - 1), cloudTop)'),
     'cloud strip must keep the top delimiter toward the weekday strip');
 assert(source.includes('CLOUD_STRIP_EXTRA'),
@@ -52,9 +56,44 @@ assert(source.includes("set_boolean('show-clouds'"),
     'cloud visibility must persist in GSettings');
 assert(source.includes("set_boolean('show-wind'"),
     'wind visibility must persist in GSettings');
+assert(source.includes("set_boolean('show-feels-like'"),
+    'feels-like visibility must persist in GSettings');
 assert(schema.includes('name="show-clouds"'), 'schema must define show-clouds');
 assert(schema.includes('name="show-wind"'), 'schema must define show-wind');
+assert(schema.includes('name="show-feels-like" type="b">\n      <default>false</default>'),
+    'fresh GNOME installs must hide feels-like');
+assert(schema.includes('name="show-wind" type="b">\n      <default>false</default>'),
+    'fresh GNOME installs must hide wind');
+assert(schema.includes('name="show-clouds" type="b">\n      <default>true</default>'),
+    'fresh GNOME installs must show clouds');
+assert(schema.includes('"name":"Berlin"'), 'fresh GNOME installs must use Berlin');
 assert(language.includes("clouds: 'Wolke'"), 'German cloud toggle label is missing');
 assert(language.includes("clouds: 'Cloud'"), 'English cloud toggle label is missing');
+for (const key of ['Temperatur', 'gefühlt', 'Regen %', 'Regen mm', 'Wolke', 'Wind'])
+    assert(language.includes(key), `German full-view legend must include ${key}`);
+for (const key of ['Temperature', 'feels like', 'rain %', 'rain mm', 'cloud', 'wind'])
+    assert(language.includes(key), `English full-view legend must include ${key}`);
+
+const extensionClass = source.slice(source.indexOf('export default class '))
+    .replace('export default class ', 'class ');
+const WetterkurveExtension = vm.runInNewContext(
+    extensionClass + '\nWetterkurveExtension;', {Extension: class {}});
+const extension = new WetterkurveExtension();
+const saved = [];
+const layers = [];
+extension._settings = {set_boolean(key, value) { saved.push([key, value]); }};
+extension._chart = {setLayers(...value) { layers.push(value); }};
+extension._updateLayerButtons = () => {};
+extension._showClouds = true;
+extension._showWind = false;
+extension._showFeelsLike = false;
+extension._toggleFeelsLike();
+extension._toggleFeelsLike();
+deepStrictEqual(saved, [
+    ['show-feels-like', true], ['show-feels-like', false],
+], 'feels-like toggle must persist both on and off');
+deepStrictEqual(layers.map(value => [...value]), [
+    [true, false, true], [true, false, false],
+], 'feels-like toggle must immediately update chart layers');
 
 console.log('chart.test.js: OK');

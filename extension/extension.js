@@ -26,11 +26,11 @@ import {
 } from './weather.js';
 
 const DEFAULT_LOCATION = {
-    id: '48.137,11.576',
-    name: 'Munich',
-    label: 'Munich, Bavaria, Germany',
-    latitude: 48.137,
-    longitude: 11.576,
+    id: '52.5200,13.4050',
+    name: 'Berlin',
+    label: 'Berlin, Germany',
+    latitude: 52.520,
+    longitude: 13.405,
     timezone: 'Europe/Berlin',
 };
 const UPDATE_SECONDS = 20 * 60;
@@ -57,7 +57,7 @@ const CHART_HEIGHT = 278;
 const PLOT_TOP_GAP = 10;
 const CLOUD_STRIP_HEIGHT = 24;
 const CLOUD_STRIP_EXTRA = CLOUD_STRIP_HEIGHT;
-const WIND_COLOR = [0.00, 226 / 255, 114 / 255, 1]; // #00E272
+const WIND_COLOR = [36 / 255, 139 / 255, 1, 1]; // #248BFF
 
 function label(text, styleClass) {
     return new St.Label({
@@ -77,7 +77,8 @@ class ForecastChart extends St.DrawingArea {
         this._forecast = [];
         this._locale = 'en-US';
         this._showClouds = true;
-        this._showWind = true;
+        this._showWind = false;
+        this._showFeelsLike = false;
         this._applyChartHeight();
         this.connect('repaint', area => this._repaint(area));
     }
@@ -92,9 +93,10 @@ class ForecastChart extends St.DrawingArea {
         this.queue_repaint();
     }
 
-    setLayers(showClouds, showWind) {
+    setLayers(showClouds, showWind, showFeelsLike) {
         this._showClouds = showClouds;
         this._showWind = showWind;
+        this._showFeelsLike = showFeelsLike;
         this._applyChartHeight();
         this.queue_repaint();
     }
@@ -123,8 +125,8 @@ class ForecastChart extends St.DrawingArea {
         };
         const plotWidth = plot.right - plot.left;
         const plotHeight = plot.bottom - plot.top;
-        const temperatures = data.flatMap(point =>
-            [point.temperature, point.apparent]);
+        const temperatures = data.flatMap(point => this._showFeelsLike
+            ? [point.temperature, point.apparent] : [point.temperature]);
         let minTemp = Math.floor(Math.min(...temperatures) / 5) * 5;
         let maxTemp = Math.ceil(Math.max(...temperatures) / 5) * 5;
         if (minTemp === maxTemp) {
@@ -146,7 +148,7 @@ class ForecastChart extends St.DrawingArea {
             this._drawCloudStrip(cr, data, x, cloudTop, cloudBottom);
 
         for (let i = 0; i < data.length - 1; i++) {
-            if (this._isNight(data[i].time)) {
+            if (!this._isNight(data[i].time)) {
                 cr.setSourceRGBA(0.13, 0.29, 0.62, 0.42);
                 cr.rectangle(x(i), plot.top, x(i + 1) - x(i) + 1, plotHeight);
                 cr.fill();
@@ -215,8 +217,9 @@ class ForecastChart extends St.DrawingArea {
                 ...color, 1);
         }
 
-        this._smoothLine(cr, data.map(point => point.apparent), x, y,
-            [0.72, 0.88, 1, 0.92], 2, true, [0.02, 0.04, 0.08, 0.68]);
+        if (this._showFeelsLike)
+            this._smoothLine(cr, data.map(point => point.apparent), x, y,
+                [0.72, 0.88, 1, 0.92], 2, true, [0.02, 0.04, 0.08, 0.68]);
         this._smoothLine(cr, data.map(point => point.temperature), x, y,
             temperatureGradient, 3.25, false, [0.02, 0.04, 0.08, 0.82]);
 
@@ -226,7 +229,7 @@ class ForecastChart extends St.DrawingArea {
             const yWind = value =>
                 plot.bottom - value / maxWind * plotHeight;
             this._smoothLine(cr, data.map(point => point.wind), x, yWind,
-                WIND_COLOR, 2, false, [0.00, 0.08, 0.05, 0.70]);
+                WIND_COLOR, 2, false, [0.00, 0.06, 0.17, 0.70]);
             cr.setSourceRGBA(...WIND_COLOR);
             cr.setFontSize(10);
             for (let tick = 0; tick <= maxWind; tick += 5) {
@@ -277,8 +280,8 @@ class ForecastChart extends St.DrawingArea {
     }
 
     _drawCloudStrip(cr, data, x, cloudTop, cloudBottom) {
-        const dayPlot = [26 / 255, 32 / 255, 44 / 255];
-        const nightPlot = [29 / 255, 50 / 255, 92 / 255];
+        const dayPlot = [29 / 255, 50 / 255, 92 / 255];
+        const nightPlot = [26 / 255, 32 / 255, 44 / 255];
         const cloudGray = [200 / 255, 200 / 255, 200 / 255];
         for (let i = 0; i < data.length - 1; i++) {
             const night = this._isNight(data[i].time);
@@ -395,6 +398,7 @@ export default class WetterkurveExtension extends Extension {
         this._activeLocation = this._locations[this._activeLocationIndex];
         this._showClouds = this._settings.get_boolean('show-clouds');
         this._showWind = this._settings.get_boolean('show-wind');
+        this._showFeelsLike = this._settings.get_boolean('show-feels-like');
         this._session = new Soup.Session({
             user_agent: `${this.metadata.name}/1`,
             timeout: 20,
@@ -480,6 +484,7 @@ export default class WetterkurveExtension extends Extension {
         this._humidity = null;
         this._cloudToggle = null;
         this._windToggle = null;
+        this._feelsLikeToggle = null;
         this._chart = null;
         this._status = null;
     }
@@ -608,7 +613,11 @@ export default class WetterkurveExtension extends Extension {
             x_expand: true,
         });
         chartHeading.add_child(label(this._t('threeDayForecast'), 'mw-section-title'));
-        const legend = label(this._t('chartLegend'), 'mw-legend');
+        const legendText = this._t('chartLegend');
+        const windMark = legendText.lastIndexOf('━');
+        const legend = new St.BoxLayout({style_class: 'mw-legend'});
+        legend.add_child(label(legendText.slice(0, windMark), 'mw-legend'));
+        legend.add_child(label(legendText.slice(windMark), 'mw-legend-wind'));
         chartHeading.add_child(legend);
         content.add_child(chartHeading);
 
@@ -618,13 +627,15 @@ export default class WetterkurveExtension extends Extension {
         });
         this._cloudToggle = this._layerButton('clouds', () => this._toggleClouds());
         this._windToggle = this._layerButton('wind', () => this._toggleWind());
+        this._feelsLikeToggle = this._layerButton('feelsLike', () => this._toggleFeelsLike());
         layers.add_child(this._cloudToggle);
         layers.add_child(this._windToggle);
+        layers.add_child(this._feelsLikeToggle);
         content.add_child(layers);
 
         this._chart = new ForecastChart();
         this._chart.setLocale(this._locale);
-        this._chart.setLayers(this._showClouds, this._showWind);
+        this._chart.setLayers(this._showClouds, this._showWind, this._showFeelsLike);
         this._updateLayerButtons();
         content.add_child(this._chart);
         this._status = label(this._t('loading'), 'mw-status');
@@ -683,6 +694,7 @@ export default class WetterkurveExtension extends Extension {
     _updateLayerButtons() {
         this._setLayerActive(this._cloudToggle, this._showClouds);
         this._setLayerActive(this._windToggle, this._showWind);
+        this._setLayerActive(this._feelsLikeToggle, this._showFeelsLike);
     }
 
     _setLayerActive(button, on) {
@@ -696,14 +708,21 @@ export default class WetterkurveExtension extends Extension {
         this._showClouds = !this._showClouds;
         this._settings.set_boolean('show-clouds', this._showClouds);
         this._updateLayerButtons();
-        this._chart.setLayers(this._showClouds, this._showWind);
+        this._chart.setLayers(this._showClouds, this._showWind, this._showFeelsLike);
     }
 
     _toggleWind() {
         this._showWind = !this._showWind;
         this._settings.set_boolean('show-wind', this._showWind);
         this._updateLayerButtons();
-        this._chart.setLayers(this._showClouds, this._showWind);
+        this._chart.setLayers(this._showClouds, this._showWind, this._showFeelsLike);
+    }
+
+    _toggleFeelsLike() {
+        this._showFeelsLike = !this._showFeelsLike;
+        this._settings.set_boolean('show-feels-like', this._showFeelsLike);
+        this._updateLayerButtons();
+        this._chart.setLayers(this._showClouds, this._showWind, this._showFeelsLike);
     }
 
     _stat(name, value) {

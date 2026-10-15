@@ -16,6 +16,11 @@ android/local.properties
 android/key.properties
 android/.kotlin/
 
+# Generated iOS project and local Xcode output
+ios/Wetterkurve.xcodeproj/
+ios/build/
+ios/DerivedData/
+
 # Secrets and local credential material
 .env
 .env.*

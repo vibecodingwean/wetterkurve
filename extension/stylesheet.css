@@ -208,6 +208,11 @@
   text-align: right;
 }
 
+.mw-legend-wind {
+  color: #248bff;
+  font-size: 11px;
+}
+
 .mw-chart {
   background-color: rgba(8, 12, 22, 0.30);
   border: 1px solid rgba(255, 255, 255, 0.12);

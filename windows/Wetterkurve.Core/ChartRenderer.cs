@@ -28,12 +28,13 @@ public static class ChartRenderer
         int width,
         int height,
         bool showClouds = true,
-        bool showWind = true)
+        bool showWind = false,
+        bool showFeelsLike = false)
     {
         using var surface = SKSurface.Create(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul));
         var canvas = surface.Canvas;
         canvas.Clear(new SKColor(8, 12, 22, 77));
-        Paint(canvas, forecast, locale, width, height, showClouds, showWind);
+        Paint(canvas, forecast, locale, width, height, showClouds, showWind, showFeelsLike);
         using var image = surface.Snapshot();
         using var data = image.Encode(SKEncodedImageFormat.Png, 90);
         return data.ToArray();
@@ -46,7 +47,8 @@ public static class ChartRenderer
         int width,
         int height,
         bool showClouds = true,
-        bool showWind = true)
+        bool showWind = false,
+        bool showFeelsLike = false)
     {
         if (data.Count < 2 || width < 100 || height < 100)
             return;
@@ -63,7 +65,9 @@ public static class ChartRenderer
             height - 42);
         var plotWidth = plot.Width;
         var plotHeight = plot.Height;
-        var temperatures = data.SelectMany(point => new[] { point.Temperature, point.Apparent }).ToList();
+        var temperatures = showFeelsLike
+            ? data.SelectMany(point => new[] { point.Temperature, point.Apparent }).ToList()
+            : data.Select(point => point.Temperature).ToList();
         var minTemp = Math.Floor(temperatures.Min() / 5) * 5;
         var maxTemp = Math.Ceiling(temperatures.Max() / 5) * 5;
         if (minTemp.Equals(maxTemp))
@@ -85,10 +89,10 @@ public static class ChartRenderer
         for (var i = 0; i < data.Count - 1; i++)
         {
             var hour = data[i].Time.Hour;
-            if (hour is >= 21 or < 6)
+            if (hour is >= 6 and < 21)
             {
-                using var night = new SKPaint { Color = new SKColor(33, 74, 158, 107), IsAntialias = false };
-                canvas.DrawRect(new SKRect(X(i), plot.Top, X(i + 1) + 1, plot.Bottom), night);
+                using var day = new SKPaint { Color = new SKColor(33, 74, 158, 107), IsAntialias = false };
+                canvas.DrawRect(new SKRect(X(i), plot.Top, X(i + 1) + 1, plot.Bottom), day);
             }
         }
 
@@ -172,10 +176,13 @@ public static class ChartRenderer
             positions,
             SKShaderTileMode.Clamp);
 
-        StrokeSmoothLine(canvas, data.Select(point => point.Apparent).ToList(), X, Y,
-            new SKColor(5, 10, 20, 173), 4.5f, dashed: true);
-        StrokeSmoothLine(canvas, data.Select(point => point.Apparent).ToList(), X, Y,
-            new SKColor(184, 224, 255, 235), 2f, dashed: true);
+        if (showFeelsLike)
+        {
+            StrokeSmoothLine(canvas, data.Select(point => point.Apparent).ToList(), X, Y,
+                new SKColor(5, 10, 20, 173), 4.5f, dashed: true);
+            StrokeSmoothLine(canvas, data.Select(point => point.Apparent).ToList(), X, Y,
+                new SKColor(184, 224, 255, 235), 2f, dashed: true);
+        }
         StrokeSmoothLine(canvas, data.Select(point => point.Temperature).ToList(), X, Y,
             new SKColor(5, 10, 20, 209), 5.75f, dashed: false);
         using (var temperaturePaint = new SKPaint
@@ -197,12 +204,12 @@ public static class ChartRenderer
             var maxWind = Math.Max(20, Math.Ceiling(data.Max(point => point.Wind) / 5) * 5);
             float YWind(double value) => plot.Bottom - (float)(value / maxWind * plotHeight);
             StrokeSmoothLine(canvas, data.Select(point => point.Wind).ToList(), X, YWind,
-                new SKColor(0, 20, 12, 180), 3.5f, dashed: false);
+                new SKColor(0, 16, 43, 180), 3.5f, dashed: false);
             StrokeSmoothLine(canvas, data.Select(point => point.Wind).ToList(), X, YWind,
-                new SKColor(0, 226, 114, 255), 2f, dashed: false);
+                new SKColor(36, 139, 255, 255), 2f, dashed: false);
             using var windLabel = new SKPaint
             {
-                Color = new SKColor(0, 226, 114, 255),
+                Color = new SKColor(36, 139, 255, 255),
                 TextSize = 10,
                 IsAntialias = true,
                 Typeface = Typeface(),
@@ -262,8 +269,8 @@ public static class ChartRenderer
         float cloudTop,
         float cloudBottom)
     {
-        ReadOnlySpan<int> dayPlot = [26, 32, 44];
-        ReadOnlySpan<int> nightPlot = [29, 50, 92];
+        ReadOnlySpan<int> dayPlot = [29, 50, 92];
+        ReadOnlySpan<int> nightPlot = [26, 32, 44];
         ReadOnlySpan<int> cloudGray = [200, 200, 200];
         for (var i = 0; i < data.Count - 1; i++)
         {

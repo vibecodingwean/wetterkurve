@@ -17,14 +17,23 @@ class WidgetLayoutTest {
     }
 
     @Test
-    fun temperatureWidget_isThinAndFullWidthByDefault() {
+    fun currentWidget_usesSmallHomeScreenFootprint() {
         val xml = File(appRoot, "res/xml/wetterkurve_compact_info.xml").readText()
-        assertTrue(xml, xml.contains("targetCellWidth=\"5\""))
-        assertTrue(xml, xml.contains("targetCellHeight=\"1\""))
-        assertTrue(xml, xml.contains("minWidth=\"320dp\""))
-        assertTrue(xml, xml.contains("minHeight=\"48dp\""))
-        assertTrue(xml, xml.contains("resizeMode=\"horizontal\""))
+        assertTrue(xml, xml.contains("targetCellWidth=\"2\""))
+        assertTrue(xml, xml.contains("targetCellHeight=\"2\""))
+        assertTrue(xml, xml.contains("minWidth=\"140dp\""))
+        assertTrue(xml, xml.contains("minHeight=\"110dp\""))
         assertTrue(xml, xml.contains("widget_preview_compact"))
+    }
+
+    @Test
+    fun forecastWidget_isASeparateMediumProviderWithoutChangingLargeReceiver() {
+        val manifest = File(appRoot, "AndroidManifest.xml").readText()
+        val xml = File(appRoot, "res/xml/wetterkurve_forecast_info.xml").readText()
+        assertTrue(manifest, manifest.contains(".widget.ForecastWidgetReceiver"))
+        assertTrue(manifest, manifest.contains(".widget.ChartWidgetReceiver"))
+        assertTrue(xml, xml.contains("targetCellWidth=\"4\""))
+        assertTrue(xml, xml.contains("targetCellHeight=\"2\""))
     }
 
     @Test
@@ -69,7 +78,7 @@ class WidgetLayoutTest {
             renderer,
             renderer.contains("canvas.drawRect(x(0), cloudTop, x(data.lastIndex), cloudBottom, border)"),
         )
-        assertTrue(renderer, renderer.contains("#00E272"))
+        assertTrue(renderer, renderer.contains("#248BFF"))
         assertTrue(renderer, renderer.contains("yWind"))
         assertTrue(renderer, renderer.contains("paintLegendSample"))
         assertTrue(renderer, renderer.contains("LegendSample"))

@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -33,11 +35,14 @@ data class UiState(
     val searchHint: String = Language.text(Language.forLocale(), "enterTwoLetters"),
     val searchResults: List<WeatherLocation> = emptyList(),
     val showClouds: Boolean = true,
-    val showWind: Boolean = true,
+    val showWind: Boolean = false,
+    val showFeelsLike: Boolean = false,
+    val showWidgetWeatherImages: Boolean = false,
 )
 
 class WetterkurveViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = ForecastRepository(application)
+    private val settingsMutex = Mutex()
     private val language get() = state.language
     private var searchJob: Job? = null
     private var forecastJob: Job? = null
@@ -71,7 +76,7 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
         payload?.let { render(it) }
         viewModelScope.launch {
             withContext(NonCancellable) {
-                repo.saveState(state)
+                settingsMutex.withLock { repo.saveState(state) }
                 WetterkurveWidgets.updateAll(getApplication())
             }
         }
@@ -138,6 +143,16 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
         persistLayers()
     }
 
+    fun toggleFeelsLike() {
+        state = state.copy(showFeelsLike = !state.showFeelsLike)
+        persistLayers()
+    }
+
+    fun setWidgetWeatherImages(enabled: Boolean) {
+        state = state.copy(showWidgetWeatherImages = enabled)
+        persistLayers()
+    }
+
     fun refresh(force: Boolean = true) {
         forecastJob?.cancel()
         forecastJob = viewModelScope.launch {
@@ -166,20 +181,31 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun persistLayers() {
+        // Reflect the user's selection immediately, independently of disk/network/widget latency.
+        _ui.update { it.copy(showClouds = state.showClouds, showWind = state.showWind,
+            showFeelsLike = state.showFeelsLike, showWidgetWeatherImages = state.showWidgetWeatherImages) }
         viewModelScope.launch {
             withContext(NonCancellable) {
-                repo.saveState(state)
-                WetterkurveWidgets.updateAll(getApplication())
-                ForecastWorker.enqueueNow(getApplication())
+                try {
+                    settingsMutex.withLock { repo.saveState(state) }
+                } catch (_: Exception) {
+                    _ui.update { it.copy(status = t("settingsSaveFailed")) }
+                    return@withContext
+                }
+                try {
+                    WetterkurveWidgets.updateAll(getApplication())
+                    ForecastWorker.enqueueNow(getApplication())
+                } catch (_: Exception) {
+                    _ui.update { it.copy(status = t("widgetUpdateFailed")) }
+                }
             }
-            _ui.update { it.copy(showClouds = state.showClouds, showWind = state.showWind) }
         }
     }
 
     private fun persistAndReload() {
         viewModelScope.launch {
             withContext(NonCancellable) {
-                repo.saveState(state)
+                settingsMutex.withLock { repo.saveState(state) }
                 payload = null
                 lastFetchEpoch = 0
                 ForecastWorker.enqueueNow(getApplication())
@@ -205,6 +231,8 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
                 status = t("loading"),
                 showClouds = state.showClouds,
                 showWind = state.showWind,
+                showFeelsLike = state.showFeelsLike,
+                showWidgetWeatherImages = state.showWidgetWeatherImages,
             )
         }
     }
@@ -253,6 +281,10 @@ class WetterkurveViewModel(application: Application) : AndroidViewModel(applicat
 }
 
 fun iconDrawable(name: String): Int = when (name) {
+    "sunrise" -> R.drawable.sunrise
+    "sunset" -> R.drawable.sunset
+    "clear-night" -> R.drawable.clear_night
+    "partly-cloudy-night" -> R.drawable.partly_cloudy_night
     "clear" -> R.drawable.clear
     "partly-cloudy" -> R.drawable.partly_cloudy
     "cloudy" -> R.drawable.cloudy

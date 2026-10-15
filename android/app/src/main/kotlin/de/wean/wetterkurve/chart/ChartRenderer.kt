@@ -35,8 +35,8 @@ object ChartRenderer {
         floatArrayOf(0.10f, 0.22f, 0.39f, 0.88f),
     )
 
-    private val dayPlotRgb = intArrayOf(26, 32, 44)
-    private val nightPlotRgb = intArrayOf(29, 50, 92)
+    private val dayPlotRgb = intArrayOf(29, 50, 92)
+    private val nightPlotRgb = intArrayOf(26, 32, 44)
     private val cloudGrayRgb = intArrayOf(200, 200, 200)
 
     fun renderPng(
@@ -47,8 +47,9 @@ object ChartRenderer {
         now: LocalDateTime = LocalDateTime.now(),
         showClouds: Boolean = true,
         showWind: Boolean = true,
+        showFeelsLike: Boolean = false,
     ): ByteArray {
-        val bitmap = renderBitmap(forecast, locale, width, height, now, showClouds, showWind)
+        val bitmap = renderBitmap(forecast, locale, width, height, now, showClouds, showWind, showFeelsLike)
         val out = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
         bitmap.recycle()
@@ -63,11 +64,12 @@ object ChartRenderer {
         now: LocalDateTime = LocalDateTime.now(),
         showClouds: Boolean = true,
         showWind: Boolean = true,
+        showFeelsLike: Boolean = false,
     ): Bitmap {
         val bitmap = Bitmap.createBitmap(width.coerceAtLeast(1), height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         canvas.drawColor(Color.argb(77, 8, 12, 22))
-        paint(canvas, forecast, locale, width, height, now, showClouds, showWind)
+        paint(canvas, forecast, locale, width, height, now, showClouds, showWind, showFeelsLike)
         return bitmap
     }
 
@@ -80,6 +82,7 @@ object ChartRenderer {
         now: LocalDateTime = LocalDateTime.now(),
         showClouds: Boolean = true,
         showWind: Boolean = true,
+        showFeelsLike: Boolean = false,
     ) {
         if (data.size < 2 || width < 100 || height < 100) return
 
@@ -97,7 +100,7 @@ object ChartRenderer {
         )
         val plotWidth = plot.width()
         val plotHeight = plot.height()
-        val temperatures = data.flatMap { listOf(it.temperature, it.apparent) }
+        val temperatures = if (showFeelsLike) data.flatMap { listOf(it.temperature, it.apparent) } else data.map { it.temperature }
         var minTemp = floor((temperatures.minOrNull() ?: 0.0) / 5.0) * 5.0
         var maxTemp = ceil((temperatures.maxOrNull() ?: 0.0) / 5.0) * 5.0
         if (minTemp == maxTemp) {
@@ -117,7 +120,7 @@ object ChartRenderer {
 
         for (i in 0 until data.size - 1) {
             val hour = data[i].time.hour
-            if (hour >= 21 || hour < 6) {
+            if (hour >= 6 && hour < 21) {
                 canvas.drawRect(x(i), plot.top, x(i + 1) + 1, plot.bottom, paint(Color.argb(107, 33, 74, 158)))
             }
         }
@@ -185,8 +188,10 @@ object ChartRenderer {
         }.toFloatArray()
         val shader = LinearGradient(0f, gradientStart, 0f, gradientEnd, colors, positions, Shader.TileMode.CLAMP)
 
-        strokeSmoothLine(canvas, data.map { it.apparent }, ::x, ::y, Color.argb(173, 5, 10, 20), label * 0.22f, dashed = true, dash = label * 0.18f)
-        strokeSmoothLine(canvas, data.map { it.apparent }, ::x, ::y, Color.argb(235, 184, 224, 255), label * 0.11f, dashed = true, dash = label * 0.18f)
+        if (showFeelsLike) {
+            strokeSmoothLine(canvas, data.map { it.apparent }, ::x, ::y, Color.argb(173, 5, 10, 20), label * 0.22f, dashed = true, dash = label * 0.18f)
+            strokeSmoothLine(canvas, data.map { it.apparent }, ::x, ::y, Color.argb(235, 184, 224, 255), label * 0.11f, dashed = true, dash = label * 0.18f)
+        }
         strokeSmoothLine(canvas, data.map { it.temperature }, ::x, ::y, Color.argb(209, 5, 10, 20), label * 0.28f, dashed = false)
         val temperaturePaint = paint(Color.WHITE, stroke = label * 0.16f).apply {
             this.shader = shader
@@ -199,8 +204,8 @@ object ChartRenderer {
             val maxWind = max(20.0, ceil((data.maxOf { it.wind } / 5.0)) * 5.0)
             fun yWind(value: Double): Float =
                 plot.bottom - (value / maxWind * plotHeight).toFloat()
-            val windColor = Color.parseColor("#00E272")
-            strokeSmoothLine(canvas, data.map { it.wind }, ::x, ::yWind, Color.argb(180, 0, 20, 12), label * 0.18f, dashed = false)
+            val windColor = Color.parseColor("#248BFF")
+            strokeSmoothLine(canvas, data.map { it.wind }, ::x, ::yWind, Color.argb(180, 0, 16, 43), label * 0.18f, dashed = false)
             strokeSmoothLine(canvas, data.map { it.wind }, ::x, ::yWind, windColor, label * 0.11f, dashed = false)
             val windLabelPaint = paint(windColor).apply {
                 textSize = label * 0.75f
@@ -301,7 +306,7 @@ object ChartRenderer {
                 }
             }
             LegendSample.Wind -> {
-                val p = paint(Color.parseColor("#00E272"), stroke = stroke).apply {
+                val p = paint(Color.parseColor("#248BFF"), stroke = stroke).apply {
                     strokeCap = Paint.Cap.ROUND
                 }
                 canvas.drawLine(inset, midY + 3f, width - inset, midY - 3f, p)

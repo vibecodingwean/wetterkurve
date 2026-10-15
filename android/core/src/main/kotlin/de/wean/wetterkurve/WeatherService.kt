@@ -22,11 +22,11 @@ object WeatherService {
     const val SEARCH_DELAY_MS = 250L
 
     val defaultLocation = WeatherLocation(
-        id = "48.137,11.576",
-        name = "Munich",
-        label = "Munich, Bavaria, Germany",
-        latitude = 48.137,
-        longitude = 11.576,
+        id = "52.5200,13.4050",
+        name = "Berlin",
+        label = "Berlin, Germany",
+        latitude = 52.520,
+        longitude = 13.405,
         timezone = "Europe/Berlin",
     )
 
@@ -67,17 +67,61 @@ object WeatherService {
         99 to Wmo("ϟ", "Starkes Gewitter mit Hagel", "Thunderstorm with heavy hail", "thunderstorm"),
     )
 
-    fun weatherInfo(code: Int, language: String = "en"): WeatherCondition {
+    fun weatherInfo(code: Int, language: String = "en", isDay: Boolean = true): WeatherCondition {
         val info = wmo[code]
         if (info == null) {
             return WeatherCondition("•", if (language == "de") "Unbekannt" else "Unknown", "unknown")
         }
         return WeatherCondition(
-            info.symbol,
+            if (!isDay && code in 0..2) "☾" else info.symbol,
             if (language == "de") info.de else info.en,
-            info.icon,
+            if (!isDay && code in 0..2) "${info.icon}-night" else info.icon,
         )
     }
+
+    fun hourCondition(point: HourlyPoint, language: String = "en"): WeatherCondition = when (point.solarEvent) {
+        SolarEvent.SUNRISE -> WeatherCondition("↑", if (language == "de") "Sonnenaufgang" else "Sunrise", "sunrise")
+        SolarEvent.SUNSET -> WeatherCondition("↓", if (language == "de") "Sonnenuntergang" else "Sunset", "sunset")
+        null -> weatherInfo(point.weatherCode, language, point.isDay ?: localDayFallback(point.time))
+    }
+
+    fun currentCondition(payload: ForecastPayload, now: LocalDateTime, language: String = "en"): WeatherCondition =
+        weatherInfo(payload.current?.weatherCode ?: -1, language, currentIsDay(payload, now))
+
+    /** Exact local sun times win over hourly flags, including a sunset within the current hour. */
+    fun currentIsDay(payload: ForecastPayload, now: LocalDateTime): Boolean {
+        payload.daily?.let { daily ->
+            daily.sunrise.zip(daily.sunset).forEach { (rise, set) ->
+                val sunrise = runCatching { parseHour(rise) }.getOrNull()
+                val sunset = runCatching { parseHour(set) }.getOrNull()
+                if (sunrise != null && sunset != null && sunrise.toLocalDate() == now.toLocalDate()
+                    && sunset.toLocalDate() == now.toLocalDate() && sunset.isAfter(sunrise)) {
+                    return !now.isBefore(sunrise) && now.isBefore(sunset)
+                }
+            }
+        }
+        val hourly = payload.hourly
+        val thisHour = now.withMinute(0).withSecond(0).withNano(0)
+        val index = hourly?.time?.indexOfFirst { value ->
+            runCatching { parseHour(value) == thisHour }.getOrDefault(false)
+        } ?: -1
+        daylightFlag(hourly?.isDay?.getOrNull(index))?.let { return it }
+        val current = payload.current
+        val observationInThisHour = current?.time?.let { value ->
+            runCatching { parseHour(value).withMinute(0) == thisHour }.getOrDefault(false)
+        } ?: false
+        if (observationInThisHour) daylightFlag(current?.isDay)?.let { return it }
+        return localDayFallback(now)
+    }
+
+    private fun daylightFlag(value: Int?): Boolean? = when (value) {
+        0 -> false
+        1 -> true
+        else -> null
+    }
+
+    // Legacy/offline caches predate is_day; match the chart's local-hour convention only as fallback.
+    private fun localDayFallback(time: LocalDateTime): Boolean = time.hour in 6 until 21
 
     fun round(value: Double): Int {
         if (!value.isFinite()) return 0
@@ -89,13 +133,14 @@ object WeatherService {
         longitude: Double,
         timezone: String = "Europe/Berlin",
     ): String {
-        val current = "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m"
-        val hourly = "temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,cloud_cover"
+        val current = "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,relative_humidity_2m,is_day,rain,snowfall"
+        val hourly = "temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,cloud_cover,is_day"
         return "https://api.open-meteo.com/v1/forecast?" +
             "latitude=${formatNumber(latitude)}" +
             "&longitude=${formatNumber(longitude)}" +
             "&current=$current" +
             "&hourly=$hourly" +
+            "&daily=sunrise,sunset" +
             "&forecast_days=3" +
             "&timezone=${encode(timezone)}"
     }
@@ -189,8 +234,49 @@ object WeatherService {
                 weatherCode = hourly.weatherCode[i],
                 wind = hourly.windSpeed[i],
                 cloudCover = hourly.cloudCover.getOrElse(i) { 0.0 },
+                isDay = daylightFlag(hourly.isDay.getOrNull(i)),
             )
         }
+    }
+
+    /** Future local hours, replacing a sun-event hour with its exact upcoming event time. */
+    fun nextHours(payload: ForecastPayload, now: LocalDateTime, count: Int = 6): List<HourlyPoint> {
+        val hourly = payload.hourly ?: return emptyList()
+        val events = buildList {
+            payload.daily?.sunrise?.forEach { value ->
+                runCatching { parseHour(value) }.getOrNull()?.let { add(it to SolarEvent.SUNRISE) }
+            }
+            payload.daily?.sunset?.forEach { value ->
+                runCatching { parseHour(value) }.getOrNull()?.let { add(it to SolarEvent.SUNSET) }
+            }
+        }
+        return hourly.time.indices.asSequence().flatMap { i ->
+            val hour = runCatching { parseHour(hourly.time[i]) }.getOrNull() ?: return@flatMap emptySequence()
+            val temperature = hourly.temperature.getOrNull(i) ?: return@flatMap emptySequence()
+            val weatherCode = hourly.weatherCode.getOrNull(i) ?: return@flatMap emptySequence()
+            val sunEvents = events.filter { (time, _) ->
+                time.isAfter(now) && !time.isBefore(hour) && time.isBefore(hour.plusHours(1))
+            }.sortedBy { it.first }
+            val times = if (sunEvents.isNotEmpty()) sunEvents else if (hour.isAfter(now)) listOf(hour to null) else emptyList()
+            times.asSequence().map { (time, event) ->
+                HourlyPoint(
+                    time, temperature, hourly.apparentTemperature.getOrNull(i) ?: temperature,
+                    hourly.precipitationProbability.getOrElse(i) { 0.0 },
+                    hourly.precipitation.getOrElse(i) { 0.0 }, weatherCode,
+                    hourly.windSpeed.getOrElse(i) { 0.0 }, hourly.cloudCover.getOrElse(i) { 0.0 },
+                    daylightFlag(hourly.isDay.getOrNull(i)), event,
+                )
+            }
+        }.take(count.coerceAtLeast(0)).toList()
+    }
+
+    /** Require populated metadata arrays, but keep polar placeholders valid for hourly day flags. */
+    fun hasWidgetSkyData(payload: ForecastPayload): Boolean {
+        val hourly = payload.hourly ?: return false
+        val daily = payload.daily ?: return false
+        return hourly.time.isNotEmpty() && hourly.isDay.size == hourly.time.size
+            && hourly.isDay.all { it == 0 || it == 1 }
+            && daily.sunrise.isNotEmpty() && daily.sunset.isNotEmpty()
     }
 
     fun chartDaySegments(forecast: List<HourlyPoint>, locale: String = "en-US"): List<DaySegment> {

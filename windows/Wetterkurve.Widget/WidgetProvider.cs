@@ -289,7 +289,8 @@ public sealed class WidgetProvider : IWidgetProvider, IWidgetProvider2, IWidgetR
                     560,
                     _state.ShowClouds ? 192 : 168,
                     _state.ShowClouds,
-                    _state.ShowWind);
+                    _state.ShowWind,
+                    _state.ShowFeelsLike);
                 WidgetLog.Write($"fetched {forecast.Count} points chart={session.ChartPng.Length}");
             }
             catch (Exception exception)
