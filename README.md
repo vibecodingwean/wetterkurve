@@ -1,12 +1,13 @@
 # Wetterkurve
 
 Wetterkurve brings a compact three-day weather forecast to GNOME Shell,
-Windows 11, and Android. Save up to three locations and see temperature,
+Windows 11, Android, and iPhone. Save up to three locations and see temperature,
 feels-like temperature, rain probability, and rainfall at a glance.
 
 On GNOME, current conditions appear in the top panel and the chart opens in
 a popup. Windows provides a temperature tray icon and chart window. Android
-provides a slim temperature widget and a three-day chart widget.
+provides current-conditions, six-hour, and three-day chart widgets. The iPhone
+app offers the same three widget sizes through WidgetKit.
 
 Forecasts and location search come directly from the [Open-Meteo API](https://open-meteo.com/).
 No API key is required.
@@ -21,7 +22,7 @@ No API key is required.
 - Temperature and feels-like curves plus precipitation information
 - Automatic refresh every 20 minutes and a manual refresh button
 - English by default, with optional German selected in the app
-- Optional cloud-cover and wind layers on GNOME and Android
+- Optional cloud-cover, wind, and feels-like layers
 
 ## Install
 
@@ -54,14 +55,15 @@ On a Windows 11 machine with the .NET 10 SDK:
 This publishes `Wetterkurve.exe` to `%LOCALAPPDATA%\Wetterkurve\app`. Closing
 the window hides it in the notification area; a left-click restores it.
 
-Windows binaries are built from source and distributed as release assets.
-Generated binaries are not stored in Git.
+Generated Windows binaries are not stored in Git. Build from source with the
+instructions above.
 
 ## Android
 
-The same Open-Meteo forecast runs on Android as homescreen widgets. The app
-stores up to three locations. A thin full-width widget shows the current
-temperature; a second widget shows the three-day chart.
+The same Open-Meteo forecast runs on Android as home screen widgets. The app
+stores up to three locations and offers current conditions, a six-hour forecast,
+and a three-day chart. The [Google Play listing](https://play.google.com/store/apps/details?id=com.wetterkurve)
+provides the production release.
 
 On a machine with JDK 21 and an Android SDK (API 36):
 
@@ -84,6 +86,13 @@ is saved and applies to weather labels, location search, and chart weekdays.
   the widgets use the same language.
 - **Windows:** right-click the temperature tray icon and choose
   **English / Deutsch**.
+- **iPhone:** choose **English** or **Deutsch** in the app; widgets use the
+  saved choice.
+
+## iPhone
+
+The native SwiftUI app and WidgetKit extension are in [`ios/`](ios/). See
+[`ios/README.md`](ios/README.md) for Xcode build and Simulator checks.
 
 ### Development install
 
@@ -108,8 +117,8 @@ This compiles the local GSettings schema, runs the tests, and creates
    GNOME ZIP and Windows x64 desktop ZIP from the current source. Build
    Android separately with JDK 21 and an Android SDK.
 2. Tag the tested commit as `vX.Y.Z`. After reviewing the packages, create
-   a GitHub release and attach the GNOME ZIP and Windows ZIP. Android APKs
-   are not distributed through GitHub.
+   a GitHub release and attach each artifact cleared for publication. Android
+   APKs are not distributed through GitHub.
    The tag workflow verifies the source; it does not publish packages.
 3. Submit a tested tag to extensions.gnome.org manually through the protected
    **Submit Wetterkurve to GNOME Extensions** workflow.
