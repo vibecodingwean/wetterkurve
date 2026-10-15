@@ -46,7 +46,12 @@ GNOME panel indicator: the current temperature stays near the clock, and a
 click opens the three-day chart. Windows Widgets cannot replace that taskbar
 weather button, so Wetterkurve is not installed into the Widgets Board.
 
-On a Windows 11 machine with the .NET 10 SDK:
+Download the [Windows x64 ZIP from v1.1.30](https://github.com/vibecodingwean/wetterkurve/releases/tag/v1.1.30),
+install the [.NET 10 Desktop Runtime 10.0.13 or newer](https://dotnet.microsoft.com/en-us/download/dotnet/10.0),
+then extract the ZIP and run `Wetterkurve.exe`. The ZIP uses the installed
+Desktop Runtime; it does not bundle one.
+
+To build and install from source on Windows 11 with the .NET 10 SDK 10.0.402 or newer:
 
 ```powershell
 .\windows\install.ps1 -LaunchDesktop
@@ -55,8 +60,8 @@ On a Windows 11 machine with the .NET 10 SDK:
 This publishes `Wetterkurve.exe` to `%LOCALAPPDATA%\Wetterkurve\app`. Closing
 the window hides it in the notification area; a left-click restores it.
 
-Generated Windows binaries are not stored in Git. Build from source with the
-instructions above.
+Generated Windows binaries are not stored in Git. The release ZIP and source
+install instructions above use the same desktop app.
 
 ## Android
 
